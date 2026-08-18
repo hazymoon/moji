@@ -169,14 +169,7 @@ module Moji
   #   Moji.zen_to_han("Ｒｕｂｙ！？", Moji::ALPHA)   # => "Ruby！？"
   def zen_to_han(str, tp = ALL)
     Detail.convert_encoding(str) do |s|
-      if tp.include?(ZEN_KATA)
-        s = s.gsub(Detail::ZEN_KATA_REGEXP) do
-          Detail::ZEN_KATA_LISTS.each_with_index do |list, i|
-            pos = list.index($&)
-            break Detail::HAN_KATA_LIST[pos] + Detail::HAN_VSYMBOLS[i] if pos
-          end
-        end
-      end
+      s = s.gsub(Detail::ZEN_KATA_REGEXP, Detail::ZEN_TO_HAN_KATA_TABLE) if tp.include?(ZEN_KATA)
       s = s.tr("ａ-ｚ", "a-z") if tp.include?(ZEN_LOWER)
       s = s.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
       s = s.tr("０-９", "0-9") if tp.include?(ZEN_NUMBER)
@@ -197,14 +190,10 @@ module Moji
   def han_to_zen(str, tp = ALL)
     Detail.convert_encoding(str) do |s|
       # [半]濁音記号がJSYMBOLに含まれるので、KATAの変換をJSYMBOLより前にやる必要あり。
-      if tp.include?(HAN_KATA)
-        s = s.gsub(/(#{han_kata})([ﾞﾟ]?)/) do
-          i = { "" => 0, "ﾞ" => 1, "ﾟ" => 2 }[$2]
-          pos = Detail::HAN_KATA_LIST.index($1)
-          zen = Detail::ZEN_KATA_LISTS[i][pos]
-          !zen || zen == "" ? Detail::ZEN_KATA_LISTS[0][pos] + $2 : zen
-        end
-      end
+      # 正規表現は han_kata (= Moji.regexp(HAN_KATA)) を毎回埋め込む動的構築のまま
+      # 維持する(定数化すると Encoding.default_internal 非 UTF-8 時の RegexpError が
+      # 消えて挙動が変わるため)。
+      s = s.gsub(/(#{han_kata})([ﾞﾟ]?)/, Detail::HAN_TO_ZEN_KATA_TABLE) if tp.include?(HAN_KATA)
       s = s.tr("a-z", "ａ-ｚ") if tp.include?(HAN_LOWER)
       s = s.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
       s = s.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)
