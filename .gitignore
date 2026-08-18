@@ -2,3 +2,6 @@ doc
 script
 *.gem
 exp
+pkg/
+Gemfile.lock
+.wt/
