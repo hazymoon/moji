@@ -26,6 +26,10 @@ module Moji
       "パピプペポ",
     ].map(&:chars)
 
+    # zen_to_han のカタカナ変換対象(全角カタカナ 81 文字)の 1 文字にマッチする
+    # 正規表現。従来は呼び出しごとに構築していたが、内容は定数なので巻き上げる。
+    ZEN_KATA_REGEXP = Regexp.new(format("[%s]", ZEN_KATA_LISTS.join))
+
     # Moji.regexp の合成結果のメモ化。キーは [文字種の整数値, 解決後エンコーディング]。
     # 解決後エンコーディングをキーに含めるため、Encoding.default_internal の
     # 実行時変更にも正しく追随する。一方 CHAR_REGEXPS の実行時差し替えには
