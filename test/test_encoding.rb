@@ -8,6 +8,8 @@ require "test_helper"
 # （ASCII のみの文字種が US-ASCII 正規表現を返す、漢字・罫線だけ encoding 引数が
 # 無視される、Shift_JIS 入力の han_to_zen が例外になる等）も実挙動のまま固定する。
 class TestEncoding < Minitest::Test
+  include MojiTestHelpers
+
   # 半角カナ・ひらがな・全角カナ・ASCII 英数・全角記号を含み、
   # Shift_JIS / Windows-31J / EUC-JP のいずれでも表現できる文字列。
   SRC = "ﾄﾞﾗえもんアイウABC123！？"
@@ -18,19 +20,6 @@ class TestEncoding < Minitest::Test
   HAN_TO_ZEN_RESULT      = "ドラえもんアイウＡＢＣ１２３！？"
   KATA_TO_HIRA_RESULT    = "ﾄﾞﾗえもんあいうABC123！？"
   NORMALIZE_ZEN_HAN_RESULT = "ドラえもんアイウABC123!?"
-
-  # Encoding.default_internal を一時的に設定する。
-  # 設定時の警告を抑えるため $VERBOSE も落とし、どちらも ensure で必ず復元する。
-  def with_default_internal(encoding)
-    orig_internal = Encoding.default_internal
-    orig_verbose = $VERBOSE
-    $VERBOSE = nil
-    Encoding.default_internal = encoding
-    yield
-  ensure
-    Encoding.default_internal = orig_internal
-    $VERBOSE = orig_verbose
-  end
 
   # --------------------------------------------------------------------------
   # UTF-8 のゴールデン値（以降の往復テストの比較基準）

@@ -7,6 +7,8 @@ require "test_helper"
 # 期待値はすべて現行実装を実行して得た実測値であり、直感に反するもの
 # （バグに見えるもの）もそのまま固定する。
 class TestCaseAndKana < Minitest::Test
+  include MojiTestHelpers
+
   # tr("ァ-ン", "ぁ-ん") の変換対象となる全カタカナ（U+30A1 ァ 〜 U+30F3 ン）。
   KATA_IN_RANGE =
     "ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトド" \
@@ -157,15 +159,9 @@ class TestCaseAndKana < Minitest::Test
   end
 
   def test_upcase_result_does_not_depend_on_default_internal
-    orig_internal = Encoding.default_internal
-    orig_verbose = $VERBOSE
-    $VERBOSE = nil
-    Encoding.default_internal = Encoding::UTF_8
-
-    assert_equal "ＡBC", Moji.upcase("ａbc")
-  ensure
-    Encoding.default_internal = orig_internal
-    $VERBOSE = orig_verbose
+    with_default_internal(Encoding::UTF_8) do
+      assert_equal "ＡBC", Moji.upcase("ａbc")
+    end
   end
 
   # --------------------------------------------------------- kata_to_hira
