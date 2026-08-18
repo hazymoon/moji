@@ -3,7 +3,15 @@
 このファイルの形式は [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
-## [2.0.0] - 未リリース
+## [2.0.1] - 2026-08-18
+
+### 変更
+
+- README のライセンス節を二層構造（本家由来部分は本家の Public Domain 宣言を
+  そのまま法的基礎とし、fork の変更分のみ CC0-1.0）で明文化。コード・挙動の
+  変更はなし
+
+## [2.0.0] - 2026-08-18
 
 [gimite/moji](https://github.com/gimite/moji) 1.6 からの fork。
 公開 API と変換・判定結果は本家 1.6 と完全互換（bug-for-bug）。挙動の改善は行っていない。
