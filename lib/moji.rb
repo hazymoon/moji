@@ -97,9 +97,17 @@ module Moji
     ZEN_KANJI => uni_range(0x3400, 0x4dbf, 0x4e00, 0x9fff, 0xf900, 0xfaff),
   }
 
+  # type の二分探索用に TYPE_RANGE_DATA の定数名を Flags オブジェクトへ解決し、
+  # 列ごとの配列に展開する(先頭コードポイントの配列は昇順)。
+  Detail::TYPE_RANGE_STARTS = Detail::TYPE_RANGE_DATA.map { |r| r[0] }.freeze
+  Detail::TYPE_RANGE_ENDS = Detail::TYPE_RANGE_DATA.map { |r| r[1] }.freeze
+  Detail::TYPE_RANGE_FLAGS = Detail::TYPE_RANGE_DATA.map { |r| const_get(r[2]) }.freeze
+
   # 文字 ch の文字種を返す。
   #
   # 複数文字の文字列を渡した場合は先頭 1 文字で判定する。
+  # 判定は CHAR_REGEXPS の走査結果を範囲表化した TYPE_RANGE_DATA の
+  # 二分探索で行うため、CHAR_REGEXPS を実行時に差し替えても反映されない。
   #
   # @param ch [String] 判定する文字
   # @return [FlagSetMaker::Flags, nil] 基本文字種の定数。どの分類にも
@@ -108,15 +116,18 @@ module Moji
   #   Moji.type("漢") # => Moji::ZEN_KANJI
   def type(ch)
     Detail.convert_encoding(ch) do |c|
-      c = c.slice(/\A./m)
-      result = nil
-      CHAR_REGEXPS.each do |tp, reg|
-        if c =~ reg
-          result = tp
-          break
-        end
+      # ord は先頭 1 文字しか検査しないため、後続に不正バイトを含む文字列で
+      # 従来(slice(/\A./m))が投げていた ArgumentError が消えてしまう。
+      # 従来と同一の例外を保つため、不正バイト列には同じ操作を実行する。
+      c.slice(/\A./m) unless c.valid_encoding?
+      if c.empty?
+        nil
+      else
+        o = c.ord
+        idx = Detail::TYPE_RANGE_STARTS.bsearch_index { |s| s > o }
+        idx = idx ? idx - 1 : Detail::TYPE_RANGE_STARTS.size - 1
+        idx >= 0 && o <= Detail::TYPE_RANGE_ENDS[idx] ? Detail::TYPE_RANGE_FLAGS[idx] : nil
       end
-      result
     end
   end
 
