@@ -18,6 +18,7 @@ moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔
 ## アーキテクチャ
 
 - `lib/moji.rb` — 本体。`Moji` モジュールに文字種フラグ定数・`CHAR_REGEXPS`・全公開関数を定義
+- `lib/moji/detail.rb` — `Moji::Detail`。変換テーブル（`ZEN_JSYMBOL_LIST` / `HAN_KATA_LIST` 等）と `Detail.convert_encoding` を持つ実装詳細（`@api private`）
 - `lib/moji/flag_set_maker.rb` — `Moji::FlagSetMaker`。ビットフラグ定数を生成する汎用機構。`make_flag_set` が 18 個の基本文字種定数（各 1 ビットの `Flags` オブジェクト）を定義し、複合定数（`HAN` / `ZEN` / `KANA` / `ALL` 等）は `|` で合成する
 - `CHAR_REGEXPS` は挿入順に走査され最初にマッチした文字種が勝つため、**エントリの順序に意味がある**（例: 仝 は ZEN_KANJI の範囲だが先に並ぶ ZEN_JSYMBOL に取られる）
 - `han_to_zen` はカタカナ変換を JSYMBOL 変換より先に行う必要がある（濁点・半濁点記号が JSYMBOL に含まれるため。コード中にコメントあり）
@@ -33,5 +34,5 @@ v2 系は本家 1.6 と**変換・判定結果の完全一致（bug-for-bug）**
 
 ## 編集時の注意
 
-- `lib/moji.rb` は UTF-8 のまま編集する。「〜」等の Unicode 文字をリテラルに含むため、エンコーディングを変換するツールを通してはいけない
+- `lib/moji.rb` と `lib/moji/detail.rb` は UTF-8 のまま編集する。「〜」（U+301C）と「～」（U+FF5E）の書き分けや全角英数字等の Unicode 文字をリテラルに含むため、エンコーディング変換や Unicode 正規化を行うツールを通してはいけない
 - RuboCop の恒久方針は `.rubocop.yml` に、構造由来で当面容認する違反は `.rubocop_todo.yml` に記録している。todo の解消時は該当エントリを削除して違反ゼロを確認する
