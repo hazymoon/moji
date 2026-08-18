@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # このファイルの文字コードは UTF-8 です。
-# 「〜」等の Unicode 文字をリテラルに含むため、エンコーディングを変換するツールを通してはいけません。
+# 「ａ-ｚ」等の Unicode 文字をリテラルに含むため、エンコーディングを変換するツールを通してはいけません。
 
 require "moji/detail"
 require "moji/flag_set_maker"
