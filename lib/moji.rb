@@ -296,7 +296,7 @@ Public Domainです。煮るなり焼くなりご自由に。
 
 =end
 
-require "flag_set_maker"
+require "moji/flag_set_maker"
 
 # 日本語の文字種判定、文字種変換(半角→全角、ひらがな→カタカナなど)を行うモジュール。
 module Moji
