@@ -232,4 +232,9 @@ $ gem build moji.gemspec     # gem ビルド
 - 本家: Gimite 市川 ([gimite/moji](https://github.com/gimite/moji))
 - fork: [hazymoon/moji](https://github.com/hazymoon/moji)
 
-本家は「Public Domain です。煮るなり焼くなりご自由に。」として公開されており、この fork はその意図を機械可読にした [CC0-1.0](LICENSE) で配布します。
+ライセンスは次の二層構造です。
+
+- **本家由来の部分**: 本家は「Public Domain です。煮るなり焼くなりご自由に。」と宣言して公開されており、この fork はその宣言を法的基礎としてそのまま利用しています。本家の宣言を別のライセンスで置き換えたり、原著作者の著作権表示を fork 側が新たに主張したりすることはありません
+- **fork での変更分**: [CC0-1.0](LICENSE)(Public Domain 相当の宣言 + それが法的に成立しない法域向けのフォールバック許諾)で提供します
+
+fork 全体としても本家と同じ「ご自由に」の意図を継承しており、CC0-1.0 の採用はその意図を SPDX 識別子付きで機械可読にするためのものです。
