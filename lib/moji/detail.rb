@@ -26,6 +26,15 @@ module Moji
       "パピプペポ",
     ].map(&:chars)
 
+    # Moji.regexp の合成結果のメモ化。キーは [文字種の整数値, 解決後エンコーディング]。
+    # 解決後エンコーディングをキーに含めるため、Encoding.default_internal の
+    # 実行時変更にも正しく追随する。一方 CHAR_REGEXPS の実行時差し替えには
+    # 追随しない(キャッシュ済みの合成結果を返し続ける)。
+    # 任意の | 合成もキーになりうるため、エントリ数に上限を設けて超過分は
+    # メモ化せず都度合成する(メモリを有界に保つ)。
+    REGEXP_CACHE = {} # rubocop:disable Style/MutableConstant -- キャッシュとして書き込む
+    REGEXP_CACHE_LIMIT = 100
+
     # 入力を UTF-8 に正規化してブロックを評価し、結果が文字列なら
     # 元エンコーディングへ戻して返す。
     #

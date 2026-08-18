@@ -303,6 +303,20 @@ class TestRegexpAndFlags < Minitest::Test
     assert_equal(orig_internal || Encoding::UTF_8, Moji.hira.encoding)
   end
 
+  # 同じ文字種でも default_internal を切り替えるたびに、その時点の解決後
+  # エンコーディングの正規表現が返る（キャッシュ・メモ化を導入しても、
+  # 直前の設定で作った結果を別エンコーディング設定下で返してはいけない）。
+  def test_regexp_tracks_default_internal_switches_for_same_type
+    utf8_before = Moji.regexp(Moji::HIRA)
+    assert_equal(Encoding::UTF_8, utf8_before.encoding)
+    with_default_internal(Encoding::SJIS) do
+      assert_equal(Encoding::SJIS, Moji.regexp(Moji::HIRA).encoding)
+    end
+    utf8_after = Moji.regexp(Moji::HIRA)
+    assert_equal(Encoding::UTF_8, utf8_after.encoding)
+    assert_equal(utf8_before.source, utf8_after.source)
+  end
+
   # ---- 実利用例（文字列補間） ----
 
   def test_zen_kata_interpolated_into_character_class

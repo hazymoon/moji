@@ -135,6 +135,10 @@ module Moji
 
   # 文字種 tp の 1 文字を表す正規表現を返す。
   #
+  # 合成結果は文字種と解決後エンコーディングをキーにメモ化するため、
+  # 同じ組み合わせの呼び出しは同一の Regexp オブジェクトを返す。
+  # CHAR_REGEXPS を実行時に差し替えてもメモ化済みの結果には反映されない。
+  #
   # @param tp [FlagSetMaker::Flags] 文字種(定数と、それらの `|` 合成)
   # @param encoding [Encoding, nil] 返す正規表現のエンコーディング。省略時は
   #   Encoding.default_internal(未設定なら UTF-8)
@@ -142,15 +146,17 @@ module Moji
   # @example
   #   Moji.regexp(Moji::HIRA) # => /[ぁ-ん]/
   def regexp(tp, encoding = nil)
+    encoding ||= Encoding.default_internal || Encoding::UTF_8
+    cache = Detail::REGEXP_CACHE
+    key = [tp.to_i, encoding]
+    cached = cache[key]
+    return cached if cached
+
     regs = CHAR_REGEXPS.filter_map { |tp2, reg| reg if tp.include?(tp2) }
     reg = regs.size == 1 ? regs[0] : Regexp.new(regs.join("|"))
-
-    encoding ||= Encoding.default_internal || Encoding::UTF_8
-    if encoding == Encoding::UTF_8
-      reg
-    else
-      Regexp.new(reg.to_s.encode(encoding))
-    end
+    reg = Regexp.new(reg.to_s.encode(encoding)) unless encoding == Encoding::UTF_8
+    cache[key] = reg if cache.size < Detail::REGEXP_CACHE_LIMIT
+    reg
   end
 
   # 文字列 str の全角を半角に変換して返す。
