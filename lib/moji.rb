@@ -170,8 +170,7 @@ module Moji
   def zen_to_han(str, tp = ALL)
     Detail.convert_encoding(str) do |s|
       if tp.include?(ZEN_KATA)
-        reg = Regexp.new(format("[%s]", Detail::ZEN_KATA_LISTS.join))
-        s = s.gsub(reg) do
+        s = s.gsub(Detail::ZEN_KATA_REGEXP) do
           Detail::ZEN_KATA_LISTS.each_with_index do |list, i|
             pos = list.index($&)
             break Detail::HAN_KATA_LIST[pos] + Detail::HAN_VSYMBOLS[i] if pos
