@@ -1,7 +1,7 @@
-# coding: utf-8
+# frozen_string_literal: true
 
-#このファイルの文字コードはUTF-8です。
-#このファイルをUnicode非対応のエディタで編集してはいけません（〜が文字化ける）。
+# このファイルの文字コードは UTF-8 です。
+# 「〜」等の Unicode 文字をリテラルに含むため、エンコーディングを変換するツールを通してはいけません。
 
 =begin
 
@@ -296,125 +296,89 @@ Public Domainです。煮るなり焼くなりご自由に。
 
 =end
 
-
-if RUBY_VERSION < "1.9.0" && $KCODE=="NONE"
-  warn("Warning: Set $KCODE before requiring 'moji' (UTF8 assumed)")
-  $KCODE= "u"
-end
-
-require "enumerator"
 require "flag_set_maker"
-if RUBY_VERSION < "1.9.0"
-  require "nkf"
-  require "jcode"
-end
 
-nkf_kcode= RUBY_VERSION >= "1.9.0" ? nil : {"SJIS" => "s", "EUC" => "e"}[$KCODE]
-
-script_line_no= __LINE__ + 2
-script= <<'EOS'
-
-
+# 日本語の文字種判定、文字種変換(半角→全角、ひらがな→カタカナなど)を行うモジュール。
 module Moji
-  
   extend(FlagSetMaker)
-  
+
   module Detail
-    
-    HAN_ASYMBOL_LIST= ' !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
-    ZEN_ASYMBOL_LIST= '　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣'
-    HAN_JSYMBOL1_LIST= '｡｢｣､ｰﾞﾟ･'
-    ZEN_JSYMBOL1_LIST= '。「」、ー゛゜・'
-    ZEN_JSYMBOL_LIST= '、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】'+
-      '±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓'
-    HAN_KATA_LIST= 'ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ'.split(//)
-    HAN_VSYMBOLS= ['', 'ﾞ', 'ﾟ']
-    ZEN_KATA_LISTS= [
-      'ハヒフヘホウカキクケコサシスセソタチツテトアイエオ'+
-        'ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ',
-      'バビブベボヴガギグゲゴザジズゼゾダヂヅデド',
-      'パピプペポ',
-    ].map(){ |s| s.split(//) }
-    
-    if RUBY_VERSION >= "1.9.0"
-      
-      def self.convert_encoding(str, &block)
-        orig_enc = str.encoding
-        if orig_enc == Encoding::UTF_8
-          # 無駄なコピーを避けるためにencodeを呼ばない。
-          return yield(str)
-        else
-          result = yield(str.encode(Encoding::UTF_8))
-          return result.is_a?(String) ? result.encode(orig_enc) : result
-        end
+    HAN_ASYMBOL_LIST = ' !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
+    ZEN_ASYMBOL_LIST = "　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣"
+    HAN_JSYMBOL1_LIST = "｡｢｣､ｰﾞﾟ･"
+    ZEN_JSYMBOL1_LIST = "。「」、ー゛゜・"
+    ZEN_JSYMBOL_LIST = "、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
+                       "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
+    HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ".split(//)
+    HAN_VSYMBOLS = ["", "ﾞ", "ﾟ"].freeze
+    ZEN_KATA_LISTS = [
+      "ハヒフヘホウカキクケコサシスセソタチツテトアイエオ" \
+      "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ",
+      "バビブベボヴガギグゲゴザジズゼゾダヂヅデド",
+      "パピプペポ",
+    ].map { |s| s.split(//) }
+
+    def self.convert_encoding(str)
+      orig_enc = str.encoding
+      if orig_enc == Encoding::UTF_8
+        # 無駄なコピーを避けるためにencodeを呼ばない。
+        yield(str)
+      else
+        result = yield(str.encode(Encoding::UTF_8))
+        result.is_a?(String) ? result.encode(orig_enc) : result
       end
-      
-    else
-      
-      def self.convert_encoding(str, &block)
-        return yield(str)
-      end
-      
     end
-    
   end
-  
+
   def self.uni_range(*args)
-    if RUBY_VERSION >= "1.9.0"
-      str= args.each_slice(2).map(){ |f, e| '\u%04x-\u%04x' % [f, e] }.join("")
-      return /[#{str}]/
-    elsif $KCODE=="UTF8"
-      str= args.map(){ |n| NKF.nkf("-wW160x", [n].pack("n")) }.
-        enum_slice(2).map(){ |f, e| "#{f}-#{e}" }.to_s()
-      return /[#{str}]/u
-    else
-      return nil
-    end
+    str = args.each_slice(2).map { |f, e| format('\u%04x-\u%04x', f, e) }.join
+    /[#{str}]/
   end
-  
+
   make_flag_set([
     :HAN_CONTROL, :HAN_ASYMBOL, :HAN_JSYMBOL, :HAN_NUMBER, :HAN_UPPER, :HAN_LOWER, :HAN_KATA,
     :ZEN_ASYMBOL, :ZEN_JSYMBOL, :ZEN_NUMBER, :ZEN_UPPER, :ZEN_LOWER, :ZEN_HIRA, :ZEN_KATA,
     :ZEN_GREEK, :ZEN_CYRILLIC, :ZEN_LINE, :ZEN_KANJI,
   ])
-  
-  HAN_SYMBOL= HAN_ASYMBOL | HAN_JSYMBOL
-  HAN_ALPHA= HAN_UPPER | HAN_LOWER
-  HAN_ALNUM= HAN_ALPHA | HAN_NUMBER
-  HAN= HAN_CONTROL | HAN_SYMBOL | HAN_ALNUM | HAN_KATA
-  ZEN_SYMBOL= ZEN_ASYMBOL | ZEN_JSYMBOL
-  ZEN_ALPHA= ZEN_UPPER | ZEN_LOWER
-  ZEN_ALNUM= ZEN_ALPHA | ZEN_NUMBER
-  ZEN_KANA= ZEN_KATA | ZEN_HIRA
-  ZEN= ZEN_SYMBOL | ZEN_ALNUM | ZEN_KANA | ZEN_GREEK | ZEN_CYRILLIC | ZEN_LINE | ZEN_KANJI
-  ASYMBOL= HAN_ASYMBOL | ZEN_ASYMBOL
-  JSYMBOL= HAN_JSYMBOL | ZEN_JSYMBOL
-  SYMBOL= HAN_SYMBOL | ZEN_SYMBOL
-  NUMBER= HAN_NUMBER | ZEN_NUMBER
-  UPPER= HAN_UPPER | ZEN_UPPER
-  LOWER= HAN_LOWER | ZEN_LOWER
-  ALPHA= HAN_ALPHA | ZEN_ALPHA
-  ALNUM= HAN_ALNUM | ZEN_ALNUM
-  HIRA= ZEN_HIRA
-  KATA= HAN_KATA | ZEN_KATA
-  KANA= KATA | ZEN_HIRA
-  GREEK= ZEN_GREEK
-  CYRILLIC= ZEN_CYRILLIC
-  LINE= ZEN_LINE
-  KANJI= ZEN_KANJI
-  ALL= HAN | ZEN
-  
-  CHAR_REGEXPS= {
+
+  HAN_SYMBOL = HAN_ASYMBOL | HAN_JSYMBOL
+  HAN_ALPHA = HAN_UPPER | HAN_LOWER
+  HAN_ALNUM = HAN_ALPHA | HAN_NUMBER
+  HAN = HAN_CONTROL | HAN_SYMBOL | HAN_ALNUM | HAN_KATA
+  ZEN_SYMBOL = ZEN_ASYMBOL | ZEN_JSYMBOL
+  ZEN_ALPHA = ZEN_UPPER | ZEN_LOWER
+  ZEN_ALNUM = ZEN_ALPHA | ZEN_NUMBER
+  ZEN_KANA = ZEN_KATA | ZEN_HIRA
+  ZEN = ZEN_SYMBOL | ZEN_ALNUM | ZEN_KANA | ZEN_GREEK | ZEN_CYRILLIC | ZEN_LINE | ZEN_KANJI
+  ASYMBOL = HAN_ASYMBOL | ZEN_ASYMBOL
+  JSYMBOL = HAN_JSYMBOL | ZEN_JSYMBOL
+  SYMBOL = HAN_SYMBOL | ZEN_SYMBOL
+  NUMBER = HAN_NUMBER | ZEN_NUMBER
+  UPPER = HAN_UPPER | ZEN_UPPER
+  LOWER = HAN_LOWER | ZEN_LOWER
+  ALPHA = HAN_ALPHA | ZEN_ALPHA
+  ALNUM = HAN_ALNUM | ZEN_ALNUM
+  HIRA = ZEN_HIRA
+  KATA = HAN_KATA | ZEN_KATA
+  KANA = KATA | ZEN_HIRA
+  GREEK = ZEN_GREEK
+  CYRILLIC = ZEN_CYRILLIC
+  LINE = ZEN_LINE
+  KANJI = ZEN_KANJI
+  ALL = HAN | ZEN
+
+  # Moji.type は挿入順に走査して最初にマッチした文字種を返すため、エントリの順序に意味がある。
+  CHAR_REGEXPS = {
     HAN_CONTROL => /[\x00-\x1f\x7f]/,
     HAN_ASYMBOL =>
-      Regexp.new("["+Detail::HAN_ASYMBOL_LIST.gsub(/[\[\]\-\^\\]/){ "\\"+$& }+"]"),
-    HAN_JSYMBOL => Regexp.new("["+Detail::HAN_JSYMBOL1_LIST+"]"),
+      Regexp.new("[" + Detail::HAN_ASYMBOL_LIST.gsub(/[\[\]\-\^\\]/) { "\\" + $& } + "]"),
+    HAN_JSYMBOL => Regexp.new("[" + Detail::HAN_JSYMBOL1_LIST + "]"),
     HAN_NUMBER => /[0-9]/,
     HAN_UPPER => /[A-Z]/,
     HAN_LOWER => /[a-z]/,
     HAN_KATA => /[ｦ-ｯｱ-ﾝ]/,
-    ZEN_ASYMBOL => Regexp.new("["+Detail::ZEN_ASYMBOL_LIST+"]"),
-    ZEN_JSYMBOL => Regexp.new("["+Detail::ZEN_JSYMBOL_LIST+"]"),
+    ZEN_ASYMBOL => Regexp.new("[" + Detail::ZEN_ASYMBOL_LIST + "]"),
+    ZEN_JSYMBOL => Regexp.new("[" + Detail::ZEN_JSYMBOL_LIST + "]"),
     ZEN_NUMBER => /[０-９]/,
     ZEN_UPPER => /[Ａ-Ｚ]/,
     ZEN_LOWER => /[ａ-ｚ]/,
@@ -422,178 +386,136 @@ module Moji
     ZEN_KATA => /[ァ-ヶ]/,
     ZEN_GREEK => /[Α-Ωα-ω]/,
     ZEN_CYRILLIC => /[А-Яа-я]/,
-    ZEN_LINE => uni_range(0x2570, 0x25ff) || /[─-╂]/,
-    ZEN_KANJI => uni_range(0x3400, 0x4dbf, 0x4e00, 0x9fff, 0xf900, 0xfaff) || /[亜-瑤]/,
+    ZEN_LINE => uni_range(0x2570, 0x25ff),
+    ZEN_KANJI => uni_range(0x3400, 0x4dbf, 0x4e00, 0x9fff, 0xf900, 0xfaff),
   }
-  
+
   def type(ch)
-    Detail.convert_encoding(ch) do |ch|
-      ch= ch.slice(/\A./m)
+    Detail.convert_encoding(ch) do |c|
+      c = c.slice(/\A./m)
       result = nil
-      for tp, reg in CHAR_REGEXPS
-        if ch=~reg
-          result= tp
+      CHAR_REGEXPS.each do |tp, reg|
+        if c =~ reg
+          result = tp
           break
         end
       end
       result
     end
   end
-  
+
   def type?(ch, tp)
-    Detail.convert_encoding(ch) do |ch|
-      tp.include?(type(ch))
+    Detail.convert_encoding(ch) do |c|
+      tp.include?(type(c))
     end
   end
-  
-  def regexp(tp, encoding= nil)
-    
-    regs= []
-    for tp2, reg in CHAR_REGEXPS
-      regs.push(reg) if tp.include?(tp2)
-    end
-    reg= regs.size==1 ? regs[0] : Regexp.new(regs.join("|"))
-    
-    if RUBY_VERSION >= "1.9.0" && !encoding
-      encoding= Encoding.default_internal || Encoding::UTF_8
-    end
-    if encoding && encoding != Encoding::UTF_8
-      return Regexp.new(reg.to_s().encode(encoding))
+
+  def regexp(tp, encoding = nil)
+    regs = CHAR_REGEXPS.filter_map { |tp2, reg| reg if tp.include?(tp2) }
+    reg = regs.size == 1 ? regs[0] : Regexp.new(regs.join("|"))
+
+    encoding ||= Encoding.default_internal || Encoding::UTF_8
+    if encoding == Encoding::UTF_8
+      reg
     else
-      return reg
+      Regexp.new(reg.to_s.encode(encoding))
     end
-    
   end
-  
-  def zen_to_han(str, tp= ALL)
-    Detail.convert_encoding(str) do |str|
+
+  def zen_to_han(str, tp = ALL)
+    Detail.convert_encoding(str) do |s|
       if tp.include?(ZEN_KATA)
-        reg= Regexp.new("[%s]" % Detail::ZEN_KATA_LISTS.flatten().join(""))
-        str= str.gsub(reg) do
-          for i in 0...3
-            pos= Detail::ZEN_KATA_LISTS[i].index($&)
-            break Detail::HAN_KATA_LIST[pos]+Detail::HAN_VSYMBOLS[i] if pos
+        reg = Regexp.new(format("[%s]", Detail::ZEN_KATA_LISTS.flatten.join))
+        s = s.gsub(reg) do
+          Detail::ZEN_KATA_LISTS.each_with_index do |list, i|
+            pos = list.index($&)
+            break Detail::HAN_KATA_LIST[pos] + Detail::HAN_VSYMBOLS[i] if pos
           end
         end
       end
-      str= str.tr("ａ-ｚ", "a-z") if tp.include?(ZEN_LOWER)
-      str= str.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
-      str= str.tr("０-９", "0-9") if tp.include?(ZEN_NUMBER)
-      str= str.tr(Detail::ZEN_ASYMBOL_LIST,
-        Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/){ "\\"+$& }) if tp.include?(ZEN_ASYMBOL)
-      str= str.tr(Detail::ZEN_JSYMBOL1_LIST,
-        Detail::HAN_JSYMBOL1_LIST) if tp.include?(ZEN_JSYMBOL)
-      str
+      s = s.tr("ａ-ｚ", "a-z") if tp.include?(ZEN_LOWER)
+      s = s.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
+      s = s.tr("０-９", "0-9") if tp.include?(ZEN_NUMBER)
+      if tp.include?(ZEN_ASYMBOL)
+        s = s.tr(Detail::ZEN_ASYMBOL_LIST, Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/) { "\\" + $& })
+      end
+      s = s.tr(Detail::ZEN_JSYMBOL1_LIST, Detail::HAN_JSYMBOL1_LIST) if tp.include?(ZEN_JSYMBOL)
+      s
     end
   end
-  
-  def han_to_zen(str, tp= ALL)
-    Detail.convert_encoding(str) do |str|
-      #[半]濁音記号がJSYMBOLに含まれるので、KATAの変換をJSYMBOLより前にやる必要あり。
+
+  def han_to_zen(str, tp = ALL)
+    Detail.convert_encoding(str) do |s|
+      # [半]濁音記号がJSYMBOLに含まれるので、KATAの変換をJSYMBOLより前にやる必要あり。
       if tp.include?(HAN_KATA)
-        str= str.gsub(/(#{han_kata})([ﾞﾟ]?)/) do
-          i= {""=>0, "ﾞ"=>1, "ﾟ"=>2}[$2]
-          pos= Detail::HAN_KATA_LIST.index($1)
-          s= Detail::ZEN_KATA_LISTS[i][pos]
-          (!s || s=="") ? Detail::ZEN_KATA_LISTS[0][pos]+$2 : s
+        s = s.gsub(/(#{han_kata})([ﾞﾟ]?)/) do
+          i = { "" => 0, "ﾞ" => 1, "ﾟ" => 2 }[$2]
+          pos = Detail::HAN_KATA_LIST.index($1)
+          zen = Detail::ZEN_KATA_LISTS[i][pos]
+          !zen || zen == "" ? Detail::ZEN_KATA_LISTS[0][pos] + $2 : zen
         end
       end
-      str= str.tr("a-z", "ａ-ｚ") if tp.include?(HAN_LOWER)
-      str= str.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
-      str= str.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)
-      str= str.tr(Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/){ "\\"+$& },
-        Detail::ZEN_ASYMBOL_LIST) if tp.include?(HAN_ASYMBOL)
-      str= str.tr(Detail::HAN_JSYMBOL1_LIST,
-        Detail::ZEN_JSYMBOL1_LIST) if tp.include?(HAN_JSYMBOL)
-      str
+      s = s.tr("a-z", "ａ-ｚ") if tp.include?(HAN_LOWER)
+      s = s.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
+      s = s.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)
+      if tp.include?(HAN_ASYMBOL)
+        s = s.tr(Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/) { "\\" + $& }, Detail::ZEN_ASYMBOL_LIST)
+      end
+      s = s.tr(Detail::HAN_JSYMBOL1_LIST, Detail::ZEN_JSYMBOL1_LIST) if tp.include?(HAN_JSYMBOL)
+      s
     end
   end
-  
+
   def normalize_zen_han(str)
-    Detail.convert_encoding(str) do |str|
-      zen_to_han(han_to_zen(str, HAN_JSYMBOL|HAN_KATA), ZEN_ALNUM|ZEN_ASYMBOL)
+    Detail.convert_encoding(str) do |s|
+      zen_to_han(han_to_zen(s, HAN_JSYMBOL | HAN_KATA), ZEN_ALNUM | ZEN_ASYMBOL)
     end
   end
-  
-  def upcase(str, tp= LOWER)
-    Detail.convert_encoding(str) do |str|
-      str= str.tr("a-z", "A-Z") if tp.include?(HAN_LOWER)
-      str= str.tr("ａ-ｚ", "Ａ-Ｚ") if tp.include?(ZEN_LOWER)
-      str
+
+  def upcase(str, tp = LOWER)
+    Detail.convert_encoding(str) do |s|
+      s = s.tr("a-z", "A-Z") if tp.include?(HAN_LOWER)
+      s = s.tr("ａ-ｚ", "Ａ-Ｚ") if tp.include?(ZEN_LOWER)
+      s
     end
   end
-  
-  def downcase(str, tp= UPPER)
-    Detail.convert_encoding(str) do |str|
-      str= str.tr("A-Z", "a-z") if tp.include?(HAN_UPPER)
-      str= str.tr("Ａ-Ｚ", "ａ-ｚ") if tp.include?(ZEN_UPPER)
-      str
+
+  def downcase(str, tp = UPPER)
+    Detail.convert_encoding(str) do |s|
+      s = s.tr("A-Z", "a-z") if tp.include?(HAN_UPPER)
+      s = s.tr("Ａ-Ｚ", "ａ-ｚ") if tp.include?(ZEN_UPPER)
+      s
     end
   end
-  
+
   def kata_to_hira(str)
-    Detail.convert_encoding(str) do |str|
-      str.tr("ァ-ン", "ぁ-ん")
+    Detail.convert_encoding(str) do |s|
+      s.tr("ァ-ン", "ぁ-ん")
     end
   end
-  
+
   def hira_to_kata(str)
-    Detail.convert_encoding(str) do |str|
-      str.tr("ぁ-ん", "ァ-ン")
+    Detail.convert_encoding(str) do |s|
+      s.tr("ぁ-ん", "ァ-ン")
     end
   end
-  
+
   module_function(
     :type, :type?, :regexp, :zen_to_han, :han_to_zen, :normalize_zen_han, :upcase, :downcase,
     :kata_to_hira, :hira_to_kata
   )
-  
+
   def self.define_regexp_method(name, tp)
     define_method(name) do |*args|
       regexp(tp, *args)
     end
     module_function(name)
   end
-  
-  #han_control, han_asymbol, …などのモジュール関数を定義。
-  for cons in constants
-    val= const_get(cons)
-    define_regexp_method(cons.downcase(), val) if val.is_a?(FlagSetMaker::Flags)
+
+  # han_control, han_asymbol, …など、文字種定数に対応するモジュール関数を定義。
+  # 文字種定数を追加すれば対応メソッドも自動で生える。
+  constants.each do |cons|
+    val = const_get(cons)
+    define_regexp_method(cons.downcase, val) if val.is_a?(FlagSetMaker::Flags)
   end
-  
-  def self.test()
-    orig_str= "ドラえもん(Doraemon)は、日本で1番有名な漫画だ。"
-    for encoding in RUBY_VERSION >= "1.9.0" ? [Encoding::UTF_8, Encoding::SJIS] : [nil]
-      str= encoding ? orig_str.encode(encoding) : orig_str
-      str.each_char() do |ch|
-        ch= ch.encode(Encoding::UTF_8) if encoding
-        printf("%2s  %s\n", ch, Moji.type(ch))
-      end
-      str= Moji.zen_to_han(str, Moji::ALL)
-      if encoding
-        puts(str.encode(Encoding::UTF_8))
-        puts(str.encoding)
-      else
-        puts(str)
-      end
-      str= Moji.han_to_zen(str, Moji::ALL)
-      if encoding
-        puts(str.encode(Encoding::UTF_8))
-        puts(str.encoding)
-      else
-        puts(str)
-      end
-    end
-  end
-  
-end
-
-EOS
-
-script= NKF.nkf("-#{nkf_kcode}Wx", script) if nkf_kcode
-  #UTF-8の場合、nkfしてはいけない（～が〜になるので）。
-eval(script, TOPLEVEL_BINDING, __FILE__, script_line_no)
-
-if __FILE__==$0
-  Moji.test()
 end
