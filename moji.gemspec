@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
     "LICENSE",
     "README.md",
     "lib/moji.rb",
+    "lib/moji/detail.rb",
     "lib/moji/flag_set_maker.rb",
     "lib/moji/version.rb",
   ]

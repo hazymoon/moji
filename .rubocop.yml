@@ -60,6 +60,12 @@ Metrics/BlockLength:
     - "test/**/*"
     - "*.gemspec"
 
+# lib/moji.rb の Moji モジュールは公開 API 全体を 1 モジュールに持つ本家 1.6 由来の構造。
+# 実装詳細(Detail / FlagSetMaker)は別ファイルへ分離済みで、残りは API 本体なので
+# 既定の 100 行には収まらない。行数に張り付かない余裕を持たせて上限を置く。
+Metrics/ModuleLength:
+  Max: 200
+
 # テストは実測値の羅列（ゴールデンテスト）なのでクラス長制限を適用しない。
 Metrics/ClassLength:
   Exclude:

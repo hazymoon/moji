@@ -18,11 +18,3 @@ Metrics/MethodLength:
   Exclude:
     - 'test/test_encoding.rb'
     - 'test/test_regexp_and_flags.rb'
-
-# Offense count: 1
-# Configuration parameters: CountComments, CountAsOne.
-# Max 指定だと本体の行数に張り付いて 1 行の追加で CI が落ちるため Exclude で容認する。
-# 恒久対処は Detail の lib/moji/detail.rb への分離。
-Metrics/ModuleLength:
-  Exclude:
-    - 'lib/moji.rb'
