@@ -7,20 +7,9 @@ require "test_helper"
 # 直感に反する挙動（罫線の範囲ずれ・type? の nil 素通しなど）も
 # bug-for-bug 一致のため意図的にそのまま固定している。
 class TestType < Minitest::Test
-  # Detail の記号テーブルは private 実装なので参照せず、値をリテラルとして持つ。
-  # HAN_ASYMBOL_LIST は " \ # を含むのでダブルクォート内でエスケープする。
-  HAN_ASYMBOL_LIST = " !\"\#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
-  ZEN_ASYMBOL_LIST = "　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣"
-  HAN_JSYMBOL_LIST = "｡｢｣､ｰﾞﾟ･"
-  ZEN_JSYMBOL_LIST = "、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
-                     "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
-  HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ"
-  ZEN_KATA_LISTS = [
-    "ハヒフヘホウカキクケコサシスセソタチツテトアイエオ" \
-    "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ",
-    "バビブベボヴガギグゲゴザジズゼゾダヂヅデド",
-    "パピプペポ",
-  ].freeze
+  # 対応表の正データは test_helper の GoldenFixtures に集約している
+  # （lib の Detail は private 実装なので参照しない）。
+  include GoldenFixtures
 
   def assert_type(expected, ch, message = nil)
     message ||= format("U+%s (%s)", ch.codepoints.map { |c| format("%04X", c) }.join(","), ch)
@@ -244,8 +233,8 @@ class TestType < Minitest::Test
   end
 
   def test_type_all_han_jsymbol_list_chars
-    assert_equal(8, HAN_JSYMBOL_LIST.size)
-    HAN_JSYMBOL_LIST.each_char do |ch|
+    assert_equal(8, HAN_JSYMBOL1_LIST.size)
+    HAN_JSYMBOL1_LIST.each_char do |ch|
       assert_type(Moji::HAN_JSYMBOL, ch)
     end
   end

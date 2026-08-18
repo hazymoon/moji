@@ -6,6 +6,8 @@ require "test_helper"
 # 期待値はすべて現行実装（本家 1.6 相当）の実行結果から採取している。
 # 直感に反する挙動（バグに見えるもの）もそのまま固定する。
 class TestRegexpAndFlags < Minitest::Test
+  include MojiTestHelpers
+
   # 基本 18 文字種。並び順はビット位置（HAN_CONTROL が bit 0）に対応する。
   # 将来定数が増えても既存分の互換を固定するため、リストはテスト側にリテラルで持つ。
   BASE_FLAG_NAMES = %w[
@@ -294,15 +296,9 @@ class TestRegexpAndFlags < Minitest::Test
 
   def test_regexp_follows_default_internal_when_encoding_is_omitted
     orig_internal = Encoding.default_internal
-    orig_verbose = $VERBOSE
-    begin
-      $VERBOSE = nil
-      Encoding.default_internal = Encoding::SJIS
+    with_default_internal(Encoding::SJIS) do
       assert_equal(Encoding::SJIS, Moji.hira.encoding)
       assert_equal(Encoding::SJIS, Moji.regexp(Moji::KANA).encoding)
-    ensure
-      Encoding.default_internal = orig_internal
-      $VERBOSE = orig_verbose
     end
     assert_equal(orig_internal || Encoding::UTF_8, Moji.hira.encoding)
   end

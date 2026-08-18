@@ -5,32 +5,21 @@ require "test_helper"
 # Moji.han_to_zen / Moji.normalize_zen_han のゴールデンテスト。
 # 期待値はすべて現行実装（本家 1.6 相当）の実行結果を固定したもの。
 class TestHanToZen < Minitest::Test
-  # lib 側の Detail テーブルは private 実装なので参照せず、同じ内容をリテラルで持つ。
-  # ASCII 記号表は " \ ` #$ を含むためシングルクォートで書く（ダブルクォートだと
-  # エスケープ誤りで黙って短くなり、1:1 ループが少ない文字数のまま緑になる）。
-  HAN_ASYMBOLS = ' !"#$%&\'()*+,-./:;<=>?@[\]^_`{|}~'
-  ZEN_ASYMBOLS = "　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣"
-
-  # 半角 JIS 記号の並びは「。「」、ー゛゜・」と対応する。ｰ（長音）はカナ表ではなくこちらにある。
-  HAN_JSYMBOLS = "｡｢｣､ｰﾞﾟ･"
-  ZEN_JSYMBOLS = "。「」、ー゛゜・"
-
-  HAN_KATAS = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ"
-  ZEN_KATAS_SEION = "ハヒフヘホウカキクケコサシスセソタチツテトアイエオ" \
-                    "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ"
-  ZEN_KATAS_DAKUON = "バビブベボヴガギグゲゴザジズゼゾダヂヅデド"
-  ZEN_KATAS_HANDAKUON = "パピプペポ"
+  # 対応表の正データは test_helper の GoldenFixtures に集約している
+  # （lib の Detail は private 実装なので参照しない）。
+  include GoldenFixtures
+  include MojiTestHelpers
 
   # 表そのものが壊れていないことを先に固定する（自己防衛）。
   def test_embedded_tables_have_expected_lengths
-    assert_equal(33, HAN_ASYMBOLS.length)
-    assert_equal(33, ZEN_ASYMBOLS.length)
-    assert_equal(8, HAN_JSYMBOLS.length)
-    assert_equal(8, ZEN_JSYMBOLS.length)
-    assert_equal(55, HAN_KATAS.length)
-    assert_equal(55, ZEN_KATAS_SEION.length)
-    assert_equal(21, ZEN_KATAS_DAKUON.length)
-    assert_equal(5, ZEN_KATAS_HANDAKUON.length)
+    assert_equal(33, HAN_ASYMBOL_LIST.length)
+    assert_equal(33, ZEN_ASYMBOL_LIST.length)
+    assert_equal(8, HAN_JSYMBOL1_LIST.length)
+    assert_equal(8, ZEN_JSYMBOL1_LIST.length)
+    assert_equal(55, HAN_KATA_LIST.length)
+    assert_equal(55, ZEN_KATA_SEION_LIST.length)
+    assert_equal(21, ZEN_KATA_DAKUON_LIST.length)
+    assert_equal(5, ZEN_KATA_HANDAKUON_LIST.length)
   end
 
   # ---------------------------------------------------------------- デフォルト（ALL）
@@ -69,24 +58,24 @@ class TestHanToZen < Minitest::Test
   # ---------------------------------------------------------------- 半角カナ → 全角カナ
 
   def test_han_to_zen_seion_for_every_han_kata
-    HAN_KATAS.each_char.with_index do |han, i|
-      assert_equal(ZEN_KATAS_SEION[i], Moji.han_to_zen(han), "seion mismatch at index #{i} (#{han})")
+    HAN_KATA_LIST.each_char.with_index do |han, i|
+      assert_equal(ZEN_KATA_SEION_LIST[i], Moji.han_to_zen(han), "seion mismatch at index #{i} (#{han})")
     end
   end
 
   # 濁音表は先頭 21 文字ぶんしかない。対応が無い文字（ｱ 以降）は
   # 清音 + 全角濁点「゛」になる（半角ﾞが JSYMBOL 変換で全角化されるため）。
   def test_han_to_zen_dakuten_for_every_han_kata
-    HAN_KATAS.each_char.with_index do |han, i|
-      expected = i < ZEN_KATAS_DAKUON.length ? ZEN_KATAS_DAKUON[i] : "#{ZEN_KATAS_SEION[i]}゛"
+    HAN_KATA_LIST.each_char.with_index do |han, i|
+      expected = i < ZEN_KATA_DAKUON_LIST.length ? ZEN_KATA_DAKUON_LIST[i] : "#{ZEN_KATA_SEION_LIST[i]}゛"
       assert_equal(expected, Moji.han_to_zen("#{han}ﾞ"), "dakuten mismatch at index #{i} (#{han})")
     end
   end
 
   # 半濁音表は先頭 5 文字（ﾊﾋﾌﾍﾎ）ぶんのみ。それ以外は清音 + 全角半濁点「゜」。
   def test_han_to_zen_handakuten_for_every_han_kata
-    HAN_KATAS.each_char.with_index do |han, i|
-      expected = i < ZEN_KATAS_HANDAKUON.length ? ZEN_KATAS_HANDAKUON[i] : "#{ZEN_KATAS_SEION[i]}゜"
+    HAN_KATA_LIST.each_char.with_index do |han, i|
+      expected = i < ZEN_KATA_HANDAKUON_LIST.length ? ZEN_KATA_HANDAKUON_LIST[i] : "#{ZEN_KATA_SEION_LIST[i]}゜"
       assert_equal(expected, Moji.han_to_zen("#{han}ﾟ"), "handakuten mismatch at index #{i} (#{han})")
     end
   end
@@ -138,8 +127,8 @@ class TestHanToZen < Minitest::Test
   # ---------------------------------------------------------------- 記号表の 1:1 対応
 
   def test_han_to_zen_maps_every_han_asymbol_one_to_one
-    HAN_ASYMBOLS.each_char.with_index do |han, i|
-      assert_equal(ZEN_ASYMBOLS[i], Moji.han_to_zen(han), "asymbol mismatch at index #{i} (#{han})")
+    HAN_ASYMBOL_LIST.each_char.with_index do |han, i|
+      assert_equal(ZEN_ASYMBOL_LIST[i], Moji.han_to_zen(han), "asymbol mismatch at index #{i} (#{han})")
     end
   end
 
@@ -156,8 +145,8 @@ class TestHanToZen < Minitest::Test
   end
 
   def test_han_to_zen_maps_every_han_jsymbol_one_to_one
-    HAN_JSYMBOLS.each_char.with_index do |han, i|
-      assert_equal(ZEN_JSYMBOLS[i], Moji.han_to_zen(han), "jsymbol mismatch at index #{i} (#{han})")
+    HAN_JSYMBOL1_LIST.each_char.with_index do |han, i|
+      assert_equal(ZEN_JSYMBOL1_LIST[i], Moji.han_to_zen(han), "jsymbol mismatch at index #{i} (#{han})")
     end
   end
 
@@ -266,7 +255,7 @@ class TestHanToZen < Minitest::Test
   # 入力が半角のみなら han_to_zen → zen_to_han は恒等になる。
   def test_roundtrip_is_identity_for_half_width_only_input
     inputs = [
-      "Ruby!?", "abc XYZ 012", HAN_ASYMBOLS, HAN_JSYMBOLS,
+      "Ruby!?", "abc XYZ 012", HAN_ASYMBOL_LIST, HAN_JSYMBOL1_LIST,
       "ｱｲｳｴｵ", "ｶﾞｷﾞｸﾞ", "ﾊﾟﾋﾟﾌﾟ", "ｳﾞ", "ｱﾞ", "ﾏﾟ", "ﾞ", "ﾟ", "ｰ",
       "ﾆﾎﾝｺﾞ", "", "ｶﾞﾞ", "ﾞｶﾞ", "ｶﾟﾞ", "ﾜﾞｦﾞ",
     ]
@@ -366,7 +355,7 @@ class TestHanToZen < Minitest::Test
     assert_equal("012", Moji.normalize_zen_han("０１２"))
     assert_equal("!?\#$%", Moji.normalize_zen_han("！？＃＄％"))
     assert_equal(" ", Moji.normalize_zen_han("　"))
-    assert_equal(HAN_ASYMBOLS, Moji.normalize_zen_han(ZEN_ASYMBOLS))
+    assert_equal(HAN_ASYMBOL_LIST, Moji.normalize_zen_han(ZEN_ASYMBOL_LIST))
   end
 
   # JIS 記号・半角カナは全角へ。
@@ -377,7 +366,7 @@ class TestHanToZen < Minitest::Test
     assert_equal("ア゛", Moji.normalize_zen_han("ｱﾞ"))
     assert_equal("゛゜", Moji.normalize_zen_han("ﾞﾟ"))
     assert_equal("。「」、・ー", Moji.normalize_zen_han("｡｢｣､･ｰ"))
-    assert_equal(ZEN_JSYMBOLS, Moji.normalize_zen_han(HAN_JSYMBOLS))
+    assert_equal(ZEN_JSYMBOL1_LIST, Moji.normalize_zen_han(HAN_JSYMBOL1_LIST))
   end
 
   # 全角の JIS 記号は半角へ落とさない（ZEN_JSYMBOL は変換対象外）。
@@ -435,21 +424,5 @@ class TestHanToZen < Minitest::Test
     result = Moji.normalize_zen_han(src)
     assert_equal(Encoding::Windows_31J, result.encoding)
     assert_equal("Ruby ルビー", result.encode(Encoding::UTF_8))
-  end
-
-  private
-
-  # グローバル状態は必ず ensure で戻す。
-  def with_default_internal(encoding)
-    orig_internal = Encoding.default_internal
-    orig_verbose = $VERBOSE
-    begin
-      $VERBOSE = nil
-      Encoding.default_internal = encoding
-      yield
-    ensure
-      Encoding.default_internal = orig_internal
-      $VERBOSE = orig_verbose
-    end
   end
 end
