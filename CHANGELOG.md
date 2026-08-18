@@ -16,6 +16,8 @@
   （`require "flag_set_maker"` の直接利用のみ非互換。`Moji` の公開 API は無変更）
 - 開発用メソッド `Moji.test` を削除（Minitest によるテストスイートへ置き換え）
 - `setup.rb` によるレガシーインストール方式を廃止
+- `frozen_string_literal` の導入により、変換テーブルの文字列定数（`Moji::Detail` 配下）が
+  凍結される（本家では可変だった）。`Moji::CHAR_REGEXPS` は本家同様に可変のまま
 
 ### 変更
 

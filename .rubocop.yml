@@ -25,7 +25,7 @@ Style/PerlBackrefs:
 
 # ch(文字)・tp(文字種)は本家 1.6 から続く公開 API の引数名なので許容する。
 Naming/MethodParameterName:
-  AllowedNames: ["ch", "tp", "s", "c", "i", "f", "e"]
+  AllowedNames: ["ch", "tp"]
 
 Style/FormatStringToken:
   EnforcedStyle: unannotated

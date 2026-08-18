@@ -7,21 +7,19 @@ module Moji
   module FlagSetMaker
     # フラグ名の集合を管理し、フラグ値の文字列化・検証を行う。
     class FlagSet
-      def initialize(mod, names, zero = nil)
+      def initialize(mod, names)
         @module = mod
         @flag_names = names.to_a
-        @zero_name = zero
         @flag_names.each_with_index do |name, i|
           mod.const_set(name, Flags.new(1 << i, self))
         end
-        mod.const_set(@zero_name, Flags.new(0, self)) if @zero_name
       end
 
       def to_s(value)
         names = []
         @flag_names.each_with_index { |name, i| names.push(name) if value[i] == 1 }
         if names.empty?
-          @zero_name.to_s
+          ""
         elsif names.size == 1
           names[0].to_s
         else
@@ -100,8 +98,8 @@ module Moji
       end
     end
 
-    def make_flag_set(*)
-      FlagSet.new(self, *)
+    def make_flag_set(names)
+      FlagSet.new(self, names)
     end
   end
 end

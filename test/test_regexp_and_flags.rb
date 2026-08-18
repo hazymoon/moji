@@ -445,6 +445,17 @@ class TestRegexpAndFlags < Minitest::Test
     # rubocop:enable Style/ArrayIntersect
   end
 
+  # ---- 名前空間契約 ----
+
+  # CHANGELOG が後方互換の契約として示す「FlagSetMaker は Moji::FlagSetMaker へ移動、
+  # トップレベルには置かない」を固定する。
+  def test_flags_class_lives_under_moji_namespace
+    assert(defined?(Moji::FlagSetMaker::Flags))
+    assert_instance_of(Moji::FlagSetMaker::Flags, Moji.type("漢"))
+    assert_instance_of(Moji::FlagSetMaker::Flags, Moji::ALL)
+    refute(defined?(::FlagSetMaker), "トップレベルに FlagSetMaker を定義しない契約")
+  end
+
   # ---- 等値性・ハッシュ ----
 
   def test_flag_equality

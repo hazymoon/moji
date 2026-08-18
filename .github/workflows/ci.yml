@@ -30,3 +30,18 @@ jobs:
           ruby-version: "3.3"
           bundler-cache: true
       - run: bundle exec rubocop
+
+  # gemspec の files 列挙漏れを検知するため、ビルドした gem をインストールして
+  # 作業ツリー外から require できることを確認する。
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - run: gem build moji.gemspec
+      - run: gem install ./moji-*.gem
+      - run: |
+          cd "$RUNNER_TEMP"
+          ruby -e 'require "moji"; raise "smoke failed" unless Moji.zen_to_han("Ｒｕｂｙ") == "Ruby" && Moji.type("漢") == Moji::ZEN_KANJI'

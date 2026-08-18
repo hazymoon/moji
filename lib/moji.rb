@@ -22,7 +22,7 @@ require "moji/version"
 #   Moji.zen_to_han("Ｒｕｂｙ") # => "Ruby"
 #   Moji.kata_to_hira("ルビー") # => "るびー"
 # @example 文字種による正規表現
-#   /#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん" # => 6
+#   /#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん" # => 2
 module Moji
   extend(FlagSetMaker)
 
@@ -35,6 +35,9 @@ module Moji
     ZEN_JSYMBOL1_LIST = "。「」、ー゛゜・"
     ZEN_JSYMBOL_LIST = "、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
                        "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
+    # tr 用にメタ文字(- ^ \)をエスケープした ASCII 記号リスト。
+    # 正規表現の文字クラス用(CHAR_REGEXPS 側)とはエスケープ対象の文字集合が異なる。
+    HAN_ASYMBOL_TR_LIST = HAN_ASYMBOL_LIST.gsub(/[-\^\\]/) { "\\#{$&}" }
     HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ".chars
     HAN_VSYMBOLS = ["", "ﾞ", "ﾟ"].freeze
     ZEN_KATA_LISTS = [
@@ -108,7 +111,9 @@ module Moji
   # 基本文字種 → その 1 文字にマッチする正規表現。
   # {Moji.type} は挿入順に走査して最初にマッチした文字種を返すため、
   # エントリの順序に意味がある(例: 仝 は ZEN_KANJI の範囲だが ZEN_JSYMBOL が先に取る)。
-  CHAR_REGEXPS = {
+  # 本家 1.6 ではこの Hash は可変で、利用者が判定範囲を差し替える余地があった。
+  # bug-for-bug 互換のため freeze しない。
+  CHAR_REGEXPS = { # rubocop:disable Style/MutableConstant
     HAN_CONTROL => /[\x00-\x1f\x7f]/,
     HAN_ASYMBOL =>
       Regexp.new("[#{Detail::HAN_ASYMBOL_LIST.gsub(/[\[\]\-\^\\]/) { "\\#{$&}" }}]"),
@@ -128,7 +133,7 @@ module Moji
     ZEN_CYRILLIC => /[А-Яа-я]/,
     ZEN_LINE => uni_range(0x2570, 0x25ff),
     ZEN_KANJI => uni_range(0x3400, 0x4dbf, 0x4e00, 0x9fff, 0xf900, 0xfaff),
-  }.freeze
+  }
 
   # 文字 ch の文字種を返す。
   #
@@ -208,9 +213,7 @@ module Moji
       s = s.tr("ａ-ｚ", "a-z") if tp.include?(ZEN_LOWER)
       s = s.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
       s = s.tr("０-９", "0-9") if tp.include?(ZEN_NUMBER)
-      if tp.include?(ZEN_ASYMBOL)
-        s = s.tr(Detail::ZEN_ASYMBOL_LIST, Detail::HAN_ASYMBOL_LIST.gsub(/[-\^\\]/) { "\\#{$&}" })
-      end
+      s = s.tr(Detail::ZEN_ASYMBOL_LIST, Detail::HAN_ASYMBOL_TR_LIST) if tp.include?(ZEN_ASYMBOL)
       s = s.tr(Detail::ZEN_JSYMBOL1_LIST, Detail::HAN_JSYMBOL1_LIST) if tp.include?(ZEN_JSYMBOL)
       s
     end
@@ -238,9 +241,7 @@ module Moji
       s = s.tr("a-z", "ａ-ｚ") if tp.include?(HAN_LOWER)
       s = s.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
       s = s.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)
-      if tp.include?(HAN_ASYMBOL)
-        s = s.tr(Detail::HAN_ASYMBOL_LIST.gsub(/[-\^\\]/) { "\\#{$&}" }, Detail::ZEN_ASYMBOL_LIST)
-      end
+      s = s.tr(Detail::HAN_ASYMBOL_TR_LIST, Detail::ZEN_ASYMBOL_LIST) if tp.include?(HAN_ASYMBOL)
       s = s.tr(Detail::HAN_JSYMBOL1_LIST, Detail::ZEN_JSYMBOL1_LIST) if tp.include?(HAN_JSYMBOL)
       s
     end

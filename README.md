@@ -20,7 +20,7 @@ gem "moji", github: "hazymoon/moji"
 
 ## 使い方
 
-どのエンコーディングの文字列を渡しても動作しますが、`String#encoding` が正しく設定されている必要があります。正規表現を返す関数(`Moji.kata` など)は `Encoding.default_internal`(未設定の場合は UTF-8)用の正規表現を返します。その他のエンコーディング用の正規表現は `Moji.kata(Encoding::SJIS)` などで取得できます。
+どのエンコーディングの文字列を渡しても動作しますが、`String#encoding` が正しく設定されている必要があります。正規表現を返す関数(`Moji.kata` など)は `Encoding.default_internal`(未設定の場合は UTF-8)用の正規表現を返します。その他のエンコーディング用の正規表現は `Moji.kata(Encoding::SJIS)` などで取得できます(文字種依存の制限あり。「[既知の制限](#既知の制限)」参照)。
 
 ```ruby
 require "moji"
@@ -35,7 +35,7 @@ Moji.upcase("Ｒｕｂｙ")                            # => "ＲＵＢＹ"
 Moji.kata_to_hira("ルビー")                        # => "るびー"
 
 # 文字種による正規表現。
-/#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん"   # => 6
+/#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん"   # => 2
 Regexp.last_match.to_s                             # => "ドラえもん"
 ```
 
@@ -118,7 +118,13 @@ Moji.type?("Ａ", Moji::ZEN)   # => true
 
 文字種 `type` の 1 文字を表す正規表現を返します。`type` には全ての定数と、それらを `|` で結んだものを使えます。
 
-`encoding` に `Encoding` オブジェクトを渡すと、指定のエンコーディング用の正規表現を返します。省略すると `Encoding.default_internal`(未設定の場合は `Encoding::UTF_8`)とみなします。
+`encoding` に `Encoding` オブジェクトを渡すと、その文字種の正規表現を指定のエンコーディングへ変換して返します。省略すると `Encoding.default_internal`(未設定の場合は `Encoding::UTF_8`)とみなします。
+
+ただし変換できるのは文字種の全文字が対象エンコーディングに存在する場合だけで、以下の制限があります([#5](https://github.com/hazymoon/moji/issues/5))。
+
+- `ALL` / `ZEN` / `ZEN_JSYMBOL` など「〜」(U+301C)と「～」(U+FF5E)の両方を含む文字種は、Shift_JIS / Windows-31J / EUC-JP のいずれを渡しても `Encoding::UndefinedConversionError` になります
+- ASCII のみで定義された文字種(`HAN_NUMBER` / `HAN_UPPER` など)は `encoding` 引数が無視され US-ASCII の正規表現が返ります
+- `ZEN_KANJI` / `ZEN_LINE` は内部が `\uXXXX` エスケープのため `encoding` 引数が無視され、常に UTF-8 の正規表現が返ります
 
 ```ruby
 Moji.regexp(Moji::HIRA)   # => /[ぁ-ん]/
@@ -182,14 +188,24 @@ Moji.hira_to_kata("るびー")   # => "ルビー"
 
 定数それぞれに対応するメソッド(`Moji.han_control`、`Moji.han_asymbol`、…、`Moji.kana`、…)があり、それぞれの文字種の 1 文字を表す正規表現を返します。例えば `Moji.kana` は `Moji.regexp(Moji::KANA)` と同じです。
 
-`encoding` に `Encoding` オブジェクトを渡すと、指定のエンコーディング用の正規表現を返します。省略すると `Encoding.default_internal`(未設定の場合は `Encoding::UTF_8`)とみなします。
+`encoding` に `Encoding` オブジェクトを渡すと、指定のエンコーディング用の正規表現を返します(`Moji.regexp` と同じ制限があります)。省略すると `Encoding.default_internal`(未設定の場合は `Encoding::UTF_8`)とみなします。
 
 以下の例のように、文字クラスっぽく使えます。
 
 ```ruby
-/#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん"   # => 6
+/#{Moji.kata}+#{Moji.hira}+/ =~ "ぼくドラえもん"   # => 2
 Regexp.last_match.to_s                             # => "ドラえもん"
 ```
+
+## 既知の制限
+
+本家 1.6 との完全互換(bug-for-bug)方針により、以下の挙動を意図的に維持しています。改善候補は [Issues](https://github.com/hazymoon/moji/issues)(`v2.1-candidate` ラベル)で追跡しています。
+
+- **`Moji.type?` は判定不能な文字に対して常に `true` を返します**([#3](https://github.com/hazymoon/moji/issues/3))。`Moji.type` が `nil` を返す文字(ハングル・絵文字・BMP 外など)では、どの文字種を渡しても `true` になります。「日本語の文字種に含まれるか」のバリデーションには `Moji.type` の `nil` 判定か正規表現を使ってください
+- **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)
+- **文字種判定の Unicode 範囲は本家のままです**([#4](https://github.com/hazymoon/moji/issues/4))。ヷヸヹヺ・ゔ・Ё・CJK 拡張 B 以降の漢字などは判定外(`nil`)で、罫線(`ZEN_LINE`)は U+2500〜U+256F を含みません
+- **`regexp` 系の `encoding` 引数には文字種依存の制限があります**([#5](https://github.com/hazymoon/moji/issues/5))。「Moji.regexp」の節を参照。また `Encoding.default_internal` を非 UTF-8 に設定すると、引数なしの `Moji.all` 等も同じ理由で例外になります
+- `normalize_zen_han` は全角・半角の統一のみを行い、Unicode 正規化(NFC/NFD の統一)は行いません([#1](https://github.com/hazymoon/moji/issues/1))
 
 ## 開発
 
