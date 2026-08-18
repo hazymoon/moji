@@ -125,6 +125,7 @@ Moji.type?("Ａ", Moji::ZEN)   # => true
 - `ALL` / `ZEN` / `ZEN_JSYMBOL` など「〜」(U+301C)と「～」(U+FF5E)の両方を含む文字種は、Shift_JIS / Windows-31J / EUC-JP のいずれを渡しても `Encoding::UndefinedConversionError` になります
 - ASCII のみで定義された文字種(`HAN_NUMBER` / `HAN_UPPER` など)は `encoding` 引数が無視され US-ASCII の正規表現が返ります
 - `ZEN_KANJI` / `ZEN_LINE` は内部が `\uXXXX` エスケープのため `encoding` 引数が無視され、常に UTF-8 の正規表現が返ります
+- `Encoding::SJIS` は Ruby では Windows-31J の別名です。`Moji.regexp(type, Encoding::SJIS)` が返す正規表現は Windows-31J であり、厳密な Shift_JIS とは変換可否が分かれる文字(全角ハイフン「－」など)があります
 
 ```ruby
 Moji.regexp(Moji::HIRA)   # => /[ぁ-ん]/
@@ -147,6 +148,8 @@ Moji.zen_to_han("Ｒｕｂｙ！？", Moji::ALPHA)   # => "Ruby！？"
 Moji.han_to_zen("Ruby!?")                 # => "Ｒｕｂｙ！？"
 Moji.han_to_zen("Ruby!?", Moji::SYMBOL)   # => "Ruby！？"
 ```
+
+非 UTF-8 入力では、変換結果を入力のエンコーディングへ戻せない場合に `Encoding::UndefinedConversionError` になります([#5](https://github.com/hazymoon/moji/issues/5))。代表例はハイフンで、`-` の全角化結果「－」(U+FF0D)は Shift_JIS(厳密)・EUC-JP に存在しないため、これらのエンコーディングの入力に変換対象の `-` が 1 文字でも含まれると例外になります(Windows-31J は U+FF0D を持つため成功します)。US-ASCII 入力も同じ理由で、変換対象の文字が 1 文字でもあれば例外になります(全角化の結果は必ず非 ASCII になるため)。
 
 ### `Moji.normalize_zen_han(str)`
 
@@ -202,7 +205,7 @@ Regexp.last_match.to_s                             # => "ドラえもん"
 本家 1.6 との完全互換(bug-for-bug)方針により、以下の挙動を意図的に維持しています。改善候補は [Issues](https://github.com/hazymoon/moji/issues)(`v2.1-candidate` ラベル)で追跡しています。
 
 - **`Moji.type?` は判定不能な文字に対して常に `true` を返します**([#3](https://github.com/hazymoon/moji/issues/3))。`Moji.type` が `nil` を返す文字(ハングル・絵文字・BMP 外など)では、どの文字種を渡しても `true` になります。「日本語の文字種に含まれるか」のバリデーションには `Moji.type` の `nil` 判定か正規表現を使ってください
-- **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)
+- **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)。結合文字ごと抽出したい場合は、UTF-8 限定で `Regexp.new("(?:#{Moji.kata})\\p{Mn}*")` のように結合マーク `\p{Mn}` を後置する正規表現を組んでください
 - **文字種判定の Unicode 範囲は本家のままです**([#4](https://github.com/hazymoon/moji/issues/4))。ヷヸヹヺ・ゔ・Ё・CJK 拡張 B 以降の漢字などは判定外(`nil`)で、罫線(`ZEN_LINE`)は U+2500〜U+256F を含みません
 - **`regexp` 系の `encoding` 引数には文字種依存の制限があります**([#5](https://github.com/hazymoon/moji/issues/5))。「Moji.regexp」の節を参照。また `Encoding.default_internal` を非 UTF-8 に設定すると、引数なしの `Moji.all` 等も同じ理由で例外になります
 - `normalize_zen_han` は全角・半角の統一のみを行い、Unicode 正規化(NFC/NFD の統一)は行いません([#1](https://github.com/hazymoon/moji/issues/1))
