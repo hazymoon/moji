@@ -1,0 +1,70 @@
+inherit_from: .rubocop_todo.yml
+
+AllCops:
+  TargetRubyVersion: 3.3
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "pkg/**/*"
+    - "doc/**/*"
+    - "vendor/**/*"
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: consistent_comma
+
+# 本家 1.6 由来の正規表現処理は $& / $1 / $2 を多用しており、
+# Regexp.last_match への書き換えは可読性を下げるだけなので許容する。
+Style/PerlBackrefs:
+  Enabled: false
+
+# ch(文字)・tp(文字種)は本家 1.6 から続く公開 API の引数名なので許容する。
+Naming/MethodParameterName:
+  AllowedNames: ["ch", "tp", "s", "c", "i", "f", "e"]
+
+Style/FormatStringToken:
+  EnforcedStyle: unannotated
+
+Style/SpecialGlobalVars:
+  Enabled: false
+
+# 本家 1.6 の ZEN_JSYMBOL_LIST は ◇ を重複して含み、bug-for-bug 互換のため
+# リストとそれを固定するテストの双方で重複を維持する。
+Lint/DuplicateRegexpCharacterClassElement:
+  Enabled: false
+
+# 変換テーブルの文字列連結・文字リストは本家のデータ構造を維持しているため、
+# 行長・メソッド長の機械的な制限は適用しない。
+Layout/LineLength:
+  Max: 120
+
+Metrics/MethodLength:
+  Max: 25
+
+Metrics/AbcSize:
+  Max: 30
+
+Metrics/CyclomaticComplexity:
+  Max: 15
+
+Metrics/PerceivedComplexity:
+  Max: 15
+
+Metrics/BlockLength:
+  Exclude:
+    - "test/**/*"
+    - "*.gemspec"
+
+# テストは実測値の羅列（ゴールデンテスト）なのでクラス長制限を適用しない。
+Metrics/ClassLength:
+  Exclude:
+    - "test/**/*"
+
+Style/Documentation:
+  Exclude:
+    - "test/**/*"

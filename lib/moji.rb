@@ -34,14 +34,14 @@ module Moji
     ZEN_JSYMBOL1_LIST = "。「」、ー゛゜・"
     ZEN_JSYMBOL_LIST = "、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
                        "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
-    HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ".split(//)
+    HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ".chars
     HAN_VSYMBOLS = ["", "ﾞ", "ﾟ"].freeze
     ZEN_KATA_LISTS = [
       "ハヒフヘホウカキクケコサシスセソタチツテトアイエオ" \
       "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ",
       "バビブベボヴガギグゲゴザジズゼゾダヂヅデド",
       "パピプペポ",
-    ].map { |s| s.split(//) }
+    ].map(&:chars)
 
     # 入力を UTF-8 に正規化してブロックを評価し、結果が文字列なら
     # 元エンコーディングへ戻して返す。
@@ -71,11 +71,11 @@ module Moji
     /[#{str}]/
   end
 
-  make_flag_set([
-    :HAN_CONTROL, :HAN_ASYMBOL, :HAN_JSYMBOL, :HAN_NUMBER, :HAN_UPPER, :HAN_LOWER, :HAN_KATA,
-    :ZEN_ASYMBOL, :ZEN_JSYMBOL, :ZEN_NUMBER, :ZEN_UPPER, :ZEN_LOWER, :ZEN_HIRA, :ZEN_KATA,
-    :ZEN_GREEK, :ZEN_CYRILLIC, :ZEN_LINE, :ZEN_KANJI,
-  ])
+  make_flag_set(%i[
+                  HAN_CONTROL HAN_ASYMBOL HAN_JSYMBOL HAN_NUMBER HAN_UPPER HAN_LOWER HAN_KATA
+                  ZEN_ASYMBOL ZEN_JSYMBOL ZEN_NUMBER ZEN_UPPER ZEN_LOWER ZEN_HIRA ZEN_KATA
+                  ZEN_GREEK ZEN_CYRILLIC ZEN_LINE ZEN_KANJI
+                ])
 
   # ---- 基本文字種の組み合わせと別名(各定数の意味は README.md の一覧を参照) ----
   HAN_SYMBOL = HAN_ASYMBOL | HAN_JSYMBOL
@@ -110,14 +110,14 @@ module Moji
   CHAR_REGEXPS = {
     HAN_CONTROL => /[\x00-\x1f\x7f]/,
     HAN_ASYMBOL =>
-      Regexp.new("[" + Detail::HAN_ASYMBOL_LIST.gsub(/[\[\]\-\^\\]/) { "\\" + $& } + "]"),
-    HAN_JSYMBOL => Regexp.new("[" + Detail::HAN_JSYMBOL1_LIST + "]"),
+      Regexp.new("[#{Detail::HAN_ASYMBOL_LIST.gsub(/[\[\]\-\^\\]/) { "\\#{$&}" }}]"),
+    HAN_JSYMBOL => Regexp.new("[#{Detail::HAN_JSYMBOL1_LIST}]"),
     HAN_NUMBER => /[0-9]/,
     HAN_UPPER => /[A-Z]/,
     HAN_LOWER => /[a-z]/,
     HAN_KATA => /[ｦ-ｯｱ-ﾝ]/,
-    ZEN_ASYMBOL => Regexp.new("[" + Detail::ZEN_ASYMBOL_LIST + "]"),
-    ZEN_JSYMBOL => Regexp.new("[" + Detail::ZEN_JSYMBOL_LIST + "]"),
+    ZEN_ASYMBOL => Regexp.new("[#{Detail::ZEN_ASYMBOL_LIST}]"),
+    ZEN_JSYMBOL => Regexp.new("[#{Detail::ZEN_JSYMBOL_LIST}]"),
     ZEN_NUMBER => /[０-９]/,
     ZEN_UPPER => /[Ａ-Ｚ]/,
     ZEN_LOWER => /[ａ-ｚ]/,
@@ -127,7 +127,7 @@ module Moji
     ZEN_CYRILLIC => /[А-Яа-я]/,
     ZEN_LINE => uni_range(0x2570, 0x25ff),
     ZEN_KANJI => uni_range(0x3400, 0x4dbf, 0x4e00, 0x9fff, 0xf900, 0xfaff),
-  }
+  }.freeze
 
   # 文字 ch の文字種を返す。
   #
@@ -196,7 +196,7 @@ module Moji
   def zen_to_han(str, tp = ALL)
     Detail.convert_encoding(str) do |s|
       if tp.include?(ZEN_KATA)
-        reg = Regexp.new(format("[%s]", Detail::ZEN_KATA_LISTS.flatten.join))
+        reg = Regexp.new(format("[%s]", Detail::ZEN_KATA_LISTS.join))
         s = s.gsub(reg) do
           Detail::ZEN_KATA_LISTS.each_with_index do |list, i|
             pos = list.index($&)
@@ -208,7 +208,7 @@ module Moji
       s = s.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
       s = s.tr("０-９", "0-9") if tp.include?(ZEN_NUMBER)
       if tp.include?(ZEN_ASYMBOL)
-        s = s.tr(Detail::ZEN_ASYMBOL_LIST, Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/) { "\\" + $& })
+        s = s.tr(Detail::ZEN_ASYMBOL_LIST, Detail::HAN_ASYMBOL_LIST.gsub(/[-\^\\]/) { "\\#{$&}" })
       end
       s = s.tr(Detail::ZEN_JSYMBOL1_LIST, Detail::HAN_JSYMBOL1_LIST) if tp.include?(ZEN_JSYMBOL)
       s
@@ -238,7 +238,7 @@ module Moji
       s = s.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
       s = s.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)
       if tp.include?(HAN_ASYMBOL)
-        s = s.tr(Detail::HAN_ASYMBOL_LIST.gsub(/[\-\^\\]/) { "\\" + $& }, Detail::ZEN_ASYMBOL_LIST)
+        s = s.tr(Detail::HAN_ASYMBOL_LIST.gsub(/[-\^\\]/) { "\\#{$&}" }, Detail::ZEN_ASYMBOL_LIST)
       end
       s = s.tr(Detail::HAN_JSYMBOL1_LIST, Detail::ZEN_JSYMBOL1_LIST) if tp.include?(HAN_JSYMBOL)
       s

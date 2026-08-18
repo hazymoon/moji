@@ -202,7 +202,7 @@ class TestEncoding < Minitest::Test
     error = assert_raises(Encoding::CompatibilityError) { regexp =~ "あ" }
     assert_equal(
       "incompatible encoding regexp match (Windows-31J regexp with UTF-8 string)",
-      error.message,
+      error.message
     )
   end
 
@@ -210,9 +210,9 @@ class TestEncoding < Minitest::Test
   # US-ASCII は ASCII 互換なのでどのエンコーディングの文字列とも照合できる
   def test_regexp_of_ascii_only_types_is_us_ascii_regardless_of_encoding
     [Moji::HAN_CONTROL, Moji::HAN_ASYMBOL, Moji::HAN_NUMBER,
-     Moji::HAN_UPPER, Moji::HAN_LOWER].each do |type|
+     Moji::HAN_UPPER, Moji::HAN_LOWER,].each do |type|
       [nil, Encoding::Shift_JIS, Encoding::Windows_31J,
-       Encoding::EUC_JP, Encoding::UTF_8].each do |encoding|
+       Encoding::EUC_JP, Encoding::UTF_8,].each do |encoding|
         regexp = encoding ? Moji.regexp(type, encoding) : Moji.regexp(type)
         assert_equal Encoding::US_ASCII, regexp.encoding, "type=#{type} enc=#{encoding}"
         refute regexp.fixed_encoding?, "type=#{type} enc=#{encoding}"
@@ -244,7 +244,7 @@ class TestEncoding < Minitest::Test
     end
     assert_equal(
       "incompatible encoding regexp match (UTF-8 regexp with Windows-31J string)",
-      error.message,
+      error.message
     )
   end
 
@@ -269,7 +269,7 @@ class TestEncoding < Minitest::Test
     end
     assert_equal(
       Encoding::Windows_31J,
-      Moji.regexp(Moji::ZEN_ASYMBOL, Encoding::Windows_31J).encoding,
+      Moji.regexp(Moji::ZEN_ASYMBOL, Encoding::Windows_31J).encoding
     )
 
     # ZEN_JSYMBOL は "〜"(U+301C) と "～"(U+FF5E) の両方を含み、
@@ -424,10 +424,10 @@ class TestEncoding < Minitest::Test
   # --------------------------------------------------------------------------
 
   def test_frozen_input_is_accepted
-    assert_equal "アイウ", Moji.han_to_zen("ｱｲｳ".freeze)
-    assert_equal "ｱｲｳ", Moji.zen_to_han("アイウ".freeze)
-    assert_equal "あいう", Moji.kata_to_hira("アイウ".freeze)
-    assert_equal Moji::ZEN_KANJI, Moji.type("漢".freeze)
+    assert_equal "アイウ", Moji.han_to_zen("ｱｲｳ")
+    assert_equal "ｱｲｳ", Moji.zen_to_han("アイウ")
+    assert_equal "あいう", Moji.kata_to_hira("アイウ")
+    assert_equal Moji::ZEN_KANJI, Moji.type("漢")
 
     frozen_sjis = "ｱｲｳ".encode(Encoding::Windows_31J).freeze
     result = Moji.han_to_zen(frozen_sjis)
@@ -440,7 +440,7 @@ class TestEncoding < Minitest::Test
   # （現行実装は tr を 1 度も呼ばないため入力オブジェクトをそのまま返すが、
   #   オブジェクト同一性は実装詳細なので内容とエンコーディングだけを固定する）
   def test_frozen_input_accepted_when_nothing_to_convert
-    src = "abc".freeze
+    src = "abc"
     result = Moji.zen_to_han(src, Moji::HAN)
     assert_equal "abc", result
     assert_equal Encoding::UTF_8, result.encoding

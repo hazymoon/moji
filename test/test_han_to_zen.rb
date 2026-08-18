@@ -63,7 +63,7 @@ class TestHanToZen < Minitest::Test
   end
 
   def test_han_to_zen_accepts_frozen_string
-    assert_equal("ａｂｃ　ア", Moji.han_to_zen("abc ｱ".freeze))
+    assert_equal("ａｂｃ　ア", Moji.han_to_zen("abc ｱ"))
   end
 
   # ---------------------------------------------------------------- 半角カナ → 全角カナ
@@ -268,7 +268,7 @@ class TestHanToZen < Minitest::Test
     inputs = [
       "Ruby!?", "abc XYZ 012", HAN_ASYMBOLS, HAN_JSYMBOLS,
       "ｱｲｳｴｵ", "ｶﾞｷﾞｸﾞ", "ﾊﾟﾋﾟﾌﾟ", "ｳﾞ", "ｱﾞ", "ﾏﾟ", "ﾞ", "ﾟ", "ｰ",
-      "ﾆﾎﾝｺﾞ", "", "ｶﾞﾞ", "ﾞｶﾞ", "ｶﾟﾞ", "ﾜﾞｦﾞ"
+      "ﾆﾎﾝｺﾞ", "", "ｶﾞﾞ", "ﾞｶﾞ", "ｶﾟﾞ", "ﾜﾞｦﾞ",
     ]
     inputs.each do |src|
       assert_equal(src, Moji.zen_to_han(Moji.han_to_zen(src)), "roundtrip broke for #{src.inspect}")
@@ -289,7 +289,7 @@ class TestHanToZen < Minitest::Test
       "゛" => "ﾞ",
       "ｱア" => "ｱｱ",
       "ﾃｽﾄＴＥＳＴ" => "ﾃｽﾄTEST",
-      "ドラえもん" => "ﾄﾞﾗえもん"
+      "ドラえもん" => "ﾄﾞﾗえもん",
     }.each do |src, expected|
       assert_equal(expected, Moji.zen_to_han(Moji.han_to_zen(src)), "roundtrip mismatch for #{src.inspect}")
       refute_equal(src, Moji.zen_to_han(Moji.han_to_zen(src)))
@@ -298,7 +298,7 @@ class TestHanToZen < Minitest::Test
 
   # ひらがな・漢字はどちらの変換対象でもないので往復しても不変（全角カナは対象なので不変ではない）。
   def test_roundtrip_is_identity_for_hiragana_and_kanji
-    ["ひらがな", "漢字", "日本語の文字種"].each do |src|
+    %w[ひらがな 漢字 日本語の文字種].each do |src|
       assert_equal(src, Moji.zen_to_han(Moji.han_to_zen(src)))
     end
   end
@@ -418,7 +418,7 @@ class TestHanToZen < Minitest::Test
   def test_normalize_zen_han_is_idempotent
     [
       "Ｒｕｂｙ ﾙﾋﾞｰ ２０２６！", "ｱﾞ", "ﾊﾟｿｺﾝ", "￥￣～", "Ｍｏｊｉ　１．６",
-      "！＂＃", "｡｢｣､･ｰ", "ドラえもん(Doraemon)は、日本で1番有名な漫画だ。"
+      "！＂＃", "｡｢｣､･ｰ", "ドラえもん(Doraemon)は、日本で1番有名な漫画だ。",
     ].each do |src|
       once = Moji.normalize_zen_han(src)
       assert_equal(once, Moji.normalize_zen_han(once), "not idempotent for #{src.inspect}")
@@ -427,7 +427,7 @@ class TestHanToZen < Minitest::Test
 
   def test_normalize_zen_han_empty_and_frozen
     assert_equal("", Moji.normalize_zen_han(""))
-    assert_equal("Ruby", Moji.normalize_zen_han("Ｒｕｂｙ".freeze))
+    assert_equal("Ruby", Moji.normalize_zen_han("Ｒｕｂｙ"))
   end
 
   def test_normalize_zen_han_preserves_input_encoding

@@ -13,22 +13,22 @@ class TestType < Minitest::Test
   ZEN_ASYMBOL_LIST = "　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣"
   HAN_JSYMBOL_LIST = "｡｢｣､ｰﾞﾟ･"
   ZEN_JSYMBOL_LIST = "、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
-    "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
+                     "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓"
   HAN_KATA_LIST = "ﾊﾋﾌﾍﾎｳｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄｱｲｴｵﾅﾆﾇﾈﾉﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜｦﾝｧｨｩｪｫｬｭｮｯ"
   ZEN_KATA_LISTS = [
     "ハヒフヘホウカキクケコサシスセソタチツテトアイエオ" \
-      "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ",
+    "ナニヌネノマミムメモヤユヨラリルレロワヲンァィゥェォャュョッ",
     "バビブベボヴガギグゲゴザジズゼゾダヂヅデド",
     "パピプペポ",
   ].freeze
 
   def assert_type(expected, ch, message = nil)
-    message ||= "U+%s (%s)" % [ch.codepoints.map { |c| "%04X" % c }.join(","), ch]
+    message ||= format("U+%s (%s)", ch.codepoints.map { |c| format("%04X", c) }.join(","), ch)
     assert_equal(expected, Moji.type(ch), message)
   end
 
   def assert_type_nil(ch, message = nil)
-    message ||= "U+%s (%s)" % [ch.codepoints.map { |c| "%04X" % c }.join(","), ch]
+    message ||= format("U+%s (%s)", ch.codepoints.map { |c| format("%04X", c) }.join(","), ch)
     assert_nil(Moji.type(ch), message)
   end
 
@@ -143,10 +143,10 @@ class TestType < Minitest::Test
     assert_type(Moji::ZEN_HIRA, "ぁ") # U+3041
     assert_type(Moji::ZEN_HIRA, "ん") # U+3093
     assert_type(Moji::ZEN_HIRA, "が") # が（合成済み濁音）は 1 コードポイント
-    assert_type_nil("\u3040")         # U+3040 未割り当て、範囲の直前
-    assert_type_nil("ゔ")             # U+3094 ひらがなだが範囲外
-    assert_type_nil("\u3095")         # U+3095 小書きか、範囲外
-    assert_type_nil("ゟ")             # U+309F より
+    assert_type_nil("\u3040") # U+3040 未割り当て、範囲の直前
+    assert_type_nil("ゔ") # U+3094 ひらがなだが範囲外
+    assert_type_nil("\u3095") # U+3095 小書きか、範囲外
+    assert_type_nil("ゟ") # U+309F より
   end
 
   # ZEN_KATA は /[ァ-ヶ]/ (U+30A1-U+30F6)。ヷ U+30F7 以降は範囲外で nil。
@@ -154,7 +154,7 @@ class TestType < Minitest::Test
     assert_type(Moji::ZEN_KATA, "ァ") # U+30A1
     assert_type(Moji::ZEN_KATA, "ヶ") # U+30F6
     assert_type(Moji::ZEN_KATA, "ヴ") # U+30F4
-    assert_type_nil("\u30A0")         # U+30A0 カタカナ用二重ハイフン、範囲の直前
+    assert_type_nil("\u30A0") # U+30A0 カタカナ用二重ハイフン、範囲の直前
     assert_type_nil("ヷ")             # U+30F7
     assert_type_nil("ヺ")             # U+30FA
   end
@@ -166,10 +166,10 @@ class TestType < Minitest::Test
     assert_type(Moji::ZEN_GREEK, "α") # U+03B1
     assert_type(Moji::ZEN_GREEK, "ω") # U+03C9
     assert_type(Moji::ZEN_GREEK, "΢") # U+03A2 未割り当てだが範囲内なので GREEK
-    assert_type_nil("ΐ")         # U+0390 範囲の直前
-    assert_type_nil("Ϊ")              # U+03AA 大文字レンジの直後
-    assert_type_nil("ΰ")         # U+03B0 小文字レンジの直前
-    assert_type_nil("ϊ")              # U+03CA 小文字レンジの直後
+    assert_type_nil("ΐ") # U+0390 範囲の直前
+    assert_type_nil("Ϊ") # U+03AA 大文字レンジの直後
+    assert_type_nil("ΰ") # U+03B0 小文字レンジの直前
+    assert_type_nil("ϊ") # U+03CA 小文字レンジの直後
   end
 
   # ZEN_CYRILLIC は /[А-Яа-я]/。Ё U+0401 / ё U+0451 は範囲外なので nil。
@@ -212,7 +212,7 @@ class TestType < Minitest::Test
     assert_type(Moji::ZEN_KANJI, "\uFAFF") # U+FAFF 互換漢字の末尾
     assert_type(Moji::ZEN_KANJI, "漢")
     assert_type_nil("\u33FF") # U+33FF 拡張 A の直前
-    assert_type_nil("\u4DC0")      # U+4DC0 拡張 A の直後（六十四卦）
+    assert_type_nil("\u4DC0") # U+4DC0 拡張 A の直後（六十四卦）
     assert_type_nil("ꀀ") # U+A000 CJK 統合漢字の直後
     assert_type_nil("\uF8FF") # U+F8FF 互換漢字の直前（私用領域）
     assert_type_nil("ﬀ")      # U+FB00 互換漢字の直後
@@ -306,7 +306,7 @@ class TestType < Minitest::Test
   end
 
   def test_type_returns_nil_for_non_bmp_characters
-    assert_type_nil("😀")       # U+1F600 絵文字
+    assert_type_nil("😀") # U+1F600 絵文字
     assert_type_nil("\u{1F1EF}") # 地域表示記号
     assert_type_nil("\u{10000}") # B 面の先頭
   end
@@ -330,7 +330,7 @@ class TestType < Minitest::Test
     assert_type(Moji::HAN_LOWER, "abc")
     assert_type(Moji::ZEN_ASYMBOL, "　ａ")
     assert_type(Moji::ZEN_HIRA, "がっこう")
-    assert_type(Moji::HAN_KATA, "ｶﾞ")   # 濁点は 2 文字目なので無視される
+    assert_type(Moji::HAN_KATA, "ｶﾞ") # 濁点は 2 文字目なので無視される
     assert_type(Moji::ZEN_HIRA, "か\u3099") # か + 結合濁点 U+3099 は 1 グラフィムクラスタだが 2 コードポイント
     assert_type(Moji::HAN_CONTROL, "\nあ")  # /m 付きなので改行も先頭 1 文字として拾う
   end
@@ -445,7 +445,7 @@ class TestType < Minitest::Test
     }
     unknown.each do |ch|
       types.each do |name, tp|
-        assert_equal(true, Moji.type?(ch, tp), "type?(%p, %s)" % [ch, name])
+        assert_equal(true, Moji.type?(ch, tp), format("type?(%p, %s)", ch, name))
       end
     end
   end
@@ -481,7 +481,7 @@ class TestType < Minitest::Test
     assert_equal("Moji::(HAN_KATA|ZEN_HIRA|ZEN_KATA)", Moji::KANA.inspect)
     assert_equal(
       "Moji::(HAN_CONTROL|HAN_ASYMBOL|HAN_JSYMBOL|HAN_NUMBER|HAN_UPPER|HAN_LOWER|HAN_KATA)",
-      Moji::HAN.inspect,
+      Moji::HAN.inspect
     )
   end
 end

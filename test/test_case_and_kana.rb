@@ -76,7 +76,7 @@ class TestCaseAndKana < Minitest::Test
 
   def test_upcase_accepts_frozen_string
     # 破壊的変更（tr!）ではないので凍結文字列でも動く。
-    assert_equal "ABCＡＢＣ", Moji.upcase("abcａｂｃ".freeze)
+    assert_equal "ABCＡＢＣ", Moji.upcase("abcａｂｃ")
   end
 
   def test_upcase_of_empty_string
@@ -142,7 +142,7 @@ class TestCaseAndKana < Minitest::Test
   end
 
   def test_downcase_accepts_frozen_string
-    assert_equal "abcａｂｃ", Moji.downcase("ABCＡＢＣ".freeze)
+    assert_equal "abcａｂｃ", Moji.downcase("ABCＡＢＣ")
   end
 
   def test_downcase_of_empty_string
@@ -225,7 +225,7 @@ class TestCaseAndKana < Minitest::Test
   end
 
   def test_kata_to_hira_accepts_frozen_string
-    assert_equal "あいう", Moji.kata_to_hira("アイウ".freeze)
+    assert_equal "あいう", Moji.kata_to_hira("アイウ")
   end
 
   def test_kata_to_hira_preserves_input_encoding
@@ -287,7 +287,7 @@ class TestCaseAndKana < Minitest::Test
   end
 
   def test_hira_to_kata_accepts_frozen_string
-    assert_equal "アイウ", Moji.hira_to_kata("あいう".freeze)
+    assert_equal "アイウ", Moji.hira_to_kata("あいう")
   end
 
   def test_hira_to_kata_preserves_input_encoding

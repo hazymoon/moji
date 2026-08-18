@@ -28,7 +28,7 @@ class TestRegexpAndFlags < Minitest::Test
   BASE_SAMPLE_CHARS = [
     "\n", "!", "｡", "7", "R", "r", "ﾄ",
     "！", "。", "７", "Ｒ", "ｒ", "あ", "ア",
-    "Α", "Я", "╰", "漢"
+    "Α", "Я", "╰", "漢",
   ].freeze
 
   # 基本 18 文字種の正規表現の source（CHAR_REGEXPS のリテラルそのもの）。
@@ -42,7 +42,7 @@ class TestRegexpAndFlags < Minitest::Test
     "HAN_KATA" => "[ｦ-ｯｱ-ﾝ]",
     "ZEN_ASYMBOL" => "[　！”＃＄％＆’（）＊＋，－．／：；＜＝＞？＠［￥］＾＿‘｛｜｝￣]",
     "ZEN_JSYMBOL" => "[、。・゛゜´｀¨ヽヾゝゞ〃仝々〆〇ー―‐＼～〜∥…‥“〔〕〈〉《》「」『』【】" \
-      "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓]",
+                     "±×÷≠≦≧∞∴♂♀°′″℃￠￡§☆★○●◎◇◇◆□■△▲▽▼※〒→←↑↓〓]",
     "ZEN_NUMBER" => "[０-９]",
     "ZEN_UPPER" => "[Ａ-Ｚ]",
     "ZEN_LOWER" => "[ａ-ｚ]",
@@ -70,10 +70,10 @@ class TestRegexpAndFlags < Minitest::Test
     "ZEN_LOWER" => 2048,
     "ZEN_HIRA" => 4096,
     "ZEN_KATA" => 8192,
-    "ZEN_GREEK" => 16384,
-    "ZEN_CYRILLIC" => 32768,
-    "ZEN_LINE" => 65536,
-    "ZEN_KANJI" => 131072,
+    "ZEN_GREEK" => 16_384,
+    "ZEN_CYRILLIC" => 32_768,
+    "ZEN_LINE" => 65_536,
+    "ZEN_KANJI" => 131_072,
     "HAN_SYMBOL" => 6,
     "HAN_ALPHA" => 48,
     "HAN_ALNUM" => 56,
@@ -81,8 +81,8 @@ class TestRegexpAndFlags < Minitest::Test
     "ZEN_SYMBOL" => 384,
     "ZEN_ALPHA" => 3072,
     "ZEN_ALNUM" => 3584,
-    "ZEN_KANA" => 12288,
-    "ZEN" => 262016,
+    "ZEN_KANA" => 12_288,
+    "ZEN" => 262_016,
     "ASYMBOL" => 130,
     "JSYMBOL" => 260,
     "SYMBOL" => 390,
@@ -93,12 +93,12 @@ class TestRegexpAndFlags < Minitest::Test
     "ALNUM" => 3640,
     "HIRA" => 4096,
     "KATA" => 8256,
-    "KANA" => 12352,
-    "GREEK" => 16384,
-    "CYRILLIC" => 32768,
-    "LINE" => 65536,
-    "KANJI" => 131072,
-    "ALL" => 262143,
+    "KANA" => 12_352,
+    "GREEK" => 16_384,
+    "CYRILLIC" => 32_768,
+    "LINE" => 65_536,
+    "KANJI" => 131_072,
+    "ALL" => 262_143,
   }.freeze
 
   # 全フラグ定数の to_s 実測値。単一ビットは名前そのまま、複数ビットは "(A|B)" 形式。
@@ -130,7 +130,7 @@ class TestRegexpAndFlags < Minitest::Test
     "ZEN_ALNUM" => "(ZEN_NUMBER|ZEN_UPPER|ZEN_LOWER)",
     "ZEN_KANA" => "(ZEN_HIRA|ZEN_KATA)",
     "ZEN" => "(ZEN_ASYMBOL|ZEN_JSYMBOL|ZEN_NUMBER|ZEN_UPPER|ZEN_LOWER|ZEN_HIRA|ZEN_KATA|" \
-      "ZEN_GREEK|ZEN_CYRILLIC|ZEN_LINE|ZEN_KANJI)",
+             "ZEN_GREEK|ZEN_CYRILLIC|ZEN_LINE|ZEN_KANJI)",
     "ASYMBOL" => "(HAN_ASYMBOL|ZEN_ASYMBOL)",
     "JSYMBOL" => "(HAN_JSYMBOL|ZEN_JSYMBOL)",
     "SYMBOL" => "(HAN_ASYMBOL|HAN_JSYMBOL|ZEN_ASYMBOL|ZEN_JSYMBOL)",
@@ -147,8 +147,8 @@ class TestRegexpAndFlags < Minitest::Test
     "LINE" => "ZEN_LINE",
     "KANJI" => "ZEN_KANJI",
     "ALL" => "(HAN_CONTROL|HAN_ASYMBOL|HAN_JSYMBOL|HAN_NUMBER|HAN_UPPER|HAN_LOWER|HAN_KATA|" \
-      "ZEN_ASYMBOL|ZEN_JSYMBOL|ZEN_NUMBER|ZEN_UPPER|ZEN_LOWER|ZEN_HIRA|ZEN_KATA|" \
-      "ZEN_GREEK|ZEN_CYRILLIC|ZEN_LINE|ZEN_KANJI)",
+             "ZEN_ASYMBOL|ZEN_JSYMBOL|ZEN_NUMBER|ZEN_UPPER|ZEN_LOWER|ZEN_HIRA|ZEN_KATA|" \
+             "ZEN_GREEK|ZEN_CYRILLIC|ZEN_LINE|ZEN_KANJI)",
   }.freeze
 
   def flag(name)
@@ -217,13 +217,13 @@ class TestRegexpAndFlags < Minitest::Test
 
   def test_regexp_for_kana_matches_han_kata_hira_and_zen_kata
     re = Moji.regexp(Moji::KANA)
-    ["ﾄ", "あ", "ア"].each { |ch| assert_equal(0, ch =~ re, ch) }
-    ["R", "７", "漢"].each { |ch| assert_nil(ch =~ re, ch) }
+    %w[ﾄ あ ア].each { |ch| assert_equal(0, ch =~ re, ch) }
+    %w[R ７ 漢].each { |ch| assert_nil(ch =~ re, ch) }
   end
 
   def test_regexp_for_alnum_matches_han_and_zen_alnum
     re = Moji.regexp(Moji::ALNUM)
-    ["7", "R", "r", "７", "Ｒ", "ｒ"].each { |ch| assert_equal(0, ch =~ re, ch) }
+    %w[7 R r ７ Ｒ ｒ].each { |ch| assert_equal(0, ch =~ re, ch) }
     ["あ", "！", "漢"].each { |ch| assert_nil(ch =~ re, ch) }
   end
 
@@ -354,7 +354,7 @@ class TestRegexpAndFlags < Minitest::Test
   end
 
   def test_all_has_all_18_bits_set
-    assert_equal(262143, Moji::ALL.to_i)
+    assert_equal(262_143, Moji::ALL.to_i)
     assert_equal((1 << 18) - 1, Moji::ALL.to_i)
   end
 
@@ -414,7 +414,7 @@ class TestRegexpAndFlags < Minitest::Test
   end
 
   def test_flag_not_operator_is_masked_to_18_bits
-    assert_equal(262142, (~Moji::HAN_CONTROL).to_i)
+    assert_equal(262_142, (~Moji::HAN_CONTROL).to_i)
     assert_equal(Moji::ZEN, ~Moji::HAN)
     # 全ビット立ちの補集合は 0（負数にはならない）。
     assert_equal(0, (~Moji::ALL).to_i)
@@ -440,7 +440,9 @@ class TestRegexpAndFlags < Minitest::Test
   def test_empty_p_is_inverted
     # empty? の実装は @value != 0 を返しており、名前と意味が逆。
     assert(Moji::ALL.empty?, "ビットが立っているのに empty? は true")
+    # rubocop:disable Style/ArrayIntersect -- Flags の & は Array ではないので intersect? に書き換えてはいけない
     refute((Moji::HAN & Moji::ZEN).empty?, "ビットが 0 なのに empty? は false")
+    # rubocop:enable Style/ArrayIntersect
   end
 
   # ---- 等値性・ハッシュ ----
@@ -456,7 +458,7 @@ class TestRegexpAndFlags < Minitest::Test
     # 比較相手が Flags でなければ常に false（Integer との相互変換はしない）。
     refute(Moji::HIRA == 4096)
     refute(Moji::HIRA.eql?(4096))
-    refute(Moji::HIRA == nil)
+    refute(Moji::HIRA.nil?)
   end
 
   def test_flag_hash_is_delegated_to_to_i
@@ -541,16 +543,16 @@ class TestRegexpAndFlags < Minitest::Test
 
   def test_zen_line_range_starts_at_u2570
     # 罫線の範囲は 0x2570-0x25FF。フォールバック側の /[─-╂]/ が示す 0x2500 始まりではない。
-    assert_nil("─" =~ Moji.line)  # U+2500
+    assert_nil("─" =~ Moji.line) # U+2500
     assert_equal(0, "╰" =~ Moji.line)  # U+2570
     assert_equal(0, "○" =~ Moji.line)  # U+25CB（ZEN_JSYMBOL にも含まれる）
   end
 
   def test_kana_ranges_exclude_characters_beyond_their_upper_bound
     assert_equal(0, "ん" =~ Moji.hira)
-    assert_nil("ゔ" =~ Moji.hira)  # U+3094 は [ぁ-ん] の外
+    assert_nil("ゔ" =~ Moji.hira) # U+3094 は [ぁ-ん] の外
     assert_equal(0, "ヶ" =~ Moji.zen_kata)
-    assert_nil("ヷ" =~ Moji.zen_kata)  # U+30F7 は [ァ-ヶ] の外
+    assert_nil("ヷ" =~ Moji.zen_kata) # U+30F7 は [ァ-ヶ] の外
   end
 
   def test_kanji_regexp_excludes_iteration_mark_and_plane2

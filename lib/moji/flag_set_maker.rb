@@ -21,11 +21,11 @@ module Moji
         names = []
         @flag_names.each_with_index { |name, i| names.push(name) if value[i] == 1 }
         if names.empty?
-          (@zero_name.to_s || "0")
+          @zero_name.to_s
         elsif names.size == 1
           names[0].to_s
         else
-          "(" + names.join("|") + ")"
+          "(#{names.join('|')})"
         end
       end
 
@@ -80,7 +80,7 @@ module Moji
       end
 
       def include?(flags)
-        (@value & flags.to_i) == flags.to_i
+        @value.allbits?(flags.to_i)
       end
 
       # 歴史的経緯: 本家 1.6 から論理が反転しており、値が非ゼロのとき true を返す。
@@ -100,8 +100,8 @@ module Moji
       end
     end
 
-    def make_flag_set(*args)
-      FlagSet.new(self, *args)
+    def make_flag_set(*)
+      FlagSet.new(self, *)
     end
   end
 end
