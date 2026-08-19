@@ -4,6 +4,8 @@
 # 「〜」(U+301C) と「～」(U+FF5E) の書き分けを含む変換テーブルをリテラルに持つため、
 # エンコーディング変換や Unicode 正規化を行うツールを通してはいけません。
 
+require "moji/encodable_ranges"
+
 module Moji
   # 変換テーブルとエンコーディング処理の実装詳細。外部からの利用は想定しない。
   # @api private
@@ -162,6 +164,59 @@ module Moji
       [0xFFE3, 0xFFE3, :ZEN_ASYMBOL],
       [0xFFE5, 0xFFE5, :ZEN_ASYMBOL],
     ].freeze
+
+    # ENCODABLE_RANGE_DATA(生成物)を二分探索用の [先頭配列, 末尾配列] へ展開した表。
+    # キーは Encoding オブジェクト。Encoding::SJIS 等の別名は Encoding.find が
+    # 同一オブジェクトへ解決するため、別名指定も自然に同じ表へ届く。
+    ENCODABLE_TABLES = ENCODABLE_RANGE_DATA.to_h do |name, pairs|
+      starts = pairs.map { |r| r[0] }.freeze
+      ends = pairs.map { |r| r[1] }.freeze
+      [Encoding.find(name), [starts, ends].freeze]
+    end.freeze
+
+    # Moji.unencodable の結果のメモ化。キーは Encoding オブジェクト。
+    UNENCODABLE_REGEXPS = {} # rubocop:disable Style/MutableConstant -- キャッシュとして書き込む
+
+    # encoding(Encoding オブジェクトまたは名前文字列)を解決し、
+    # [Encoding, [先頭配列, 末尾配列]] を返す。対応外は ArgumentError。
+    def self.encodable_lookup(encoding)
+      enc = encoding.is_a?(Encoding) ? encoding : Encoding.find(encoding)
+      # Encoding.find は "internal" 等の特殊名で nil を返しうるため、nil も対応外へ落とす。
+      table = enc && ENCODABLE_TABLES[enc]
+      unless table
+        raise ArgumentError,
+              "unsupported encoding for encodability check: #{enc ? enc.name : encoding.inspect} " \
+              "(supported: #{ENCODABLE_RANGE_DATA.keys.join(', ')})"
+      end
+      [enc, table]
+    end
+
+    # 符号化可能範囲の補集合から「符号化できない 1 文字」にマッチする正規表現を
+    # 構築する。サロゲート域(U+D800〜U+DFFF)は正規表現リテラルに書けないため
+    # 補集合から除外する(正しい文字列には現れないので判定結果に影響しない)。
+    def self.build_unencodable_regexp(starts, ends)
+      gaps = []
+      prev = 0
+      starts.each_with_index do |s, i|
+        gaps << [prev, s - 1] if s > prev
+        prev = ends[i] + 1
+      end
+      gaps << [prev, 0x10FFFF] if prev <= 0x10FFFF
+      cls = gaps.flat_map { |f, l| split_out_surrogates(f, l) }
+                .map { |f, l| f == l ? format('\u{%04X}', f) : format('\u{%04X}-\u{%04X}', f, l) }
+                .join
+      Regexp.new("[#{cls}]")
+    end
+
+    # 範囲 [first, last] からサロゲート域を取り除いた範囲の配列を返す。
+    def self.split_out_surrogates(first, last)
+      return [[first, last]] if last < 0xD800 || first > 0xDFFF
+
+      parts = []
+      parts << [first, 0xD7FF] if first < 0xD800
+      parts << [0xE000, last] if last > 0xDFFF
+      parts
+    end
 
     # 入力を UTF-8 に正規化してブロックを評価し、結果が文字列なら
     # 元エンコーディングへ戻して返す。

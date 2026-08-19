@@ -205,6 +205,36 @@ Moji.hira_to_kata("るびー")   # => "ルビー"
 Regexp.last_match.to_s                             # => "ドラえもん"
 ```
 
+## 符号化可否の判定
+
+v2.1 で追加([#14](https://github.com/hazymoon/moji/issues/14))。文字列がレガシーエンコーディングへ無損失に符号化できるかを判定します。判定の定義は「Ruby の当該エンコーディングへ `String#encode` で変換できるか」で、範囲表は Ruby 3.3 の変換表から生成しています(`tools/gen_encodable_tables.rb`)。符号化の成功は往復の同一性までは保証しません(例: ―(U+2015)は Shift_JIS / EUC-JIS-2004 で —(U+2014)と同一バイト列に写るため、復号すると U+2014 になります)。
+
+対応エンコーディングは 3 種で、それぞれ実務上の使い分けに対応します。3 集合は包含関係にありません(髙 は Windows-31J のみ、𠮟 は EUC-JIS-2004 のみ)。
+
+| エンコーディング | 実務上の意味 |
+| --- | --- |
+| `Shift_JIS`(厳密) | JIS X 0201 + 0208 のみ。ベンダー拡張を認めない最厳格ライン(髙・① を弾く) |
+| `Windows-31J`(CP932) | Windows の帳票・CSV・Excel の現実ライン(NEC 特殊文字・IBM 拡張漢字を含む) |
+| `EUC-JIS-2004` | JIS X 0213:2004(第 3・第 4 水準)。常用漢字の 𠮟(BMP 外)を含む現代 JIS の完全ライン |
+
+### `Moji.encodable?(str, encoding[, nfc:])`
+
+文字列 `str` の全文字が `encoding` へ符号化可能なら `true` を返します(空文字列は `true`)。`encoding` は `Encoding` オブジェクトか名前文字列で、対応外は `ArgumentError` です。`Encoding::SJIS` は Ruby の別名解決に従い Windows-31J として扱われます。NFD のかな(結合濁点)はどのレガシーエンコーディングにも属さないため、NFD が混入しうる入力では `nfc: true` の併用を推奨します。
+
+```ruby
+Moji.encodable?("髙橋", Encoding::Windows_31J)   # => true
+Moji.encodable?("髙橋", Encoding::Shift_JIS)     # => false (髙 は IBM 拡張)
+Moji.encodable?("𠮟る", "EUC-JIS-2004")          # => true
+```
+
+### `Moji.unencodable(encoding)`
+
+`encoding` へ符号化できない 1 文字にマッチする正規表現を返します。`scan` での洗い出しや `gsub` での置換に使えます。返る正規表現は UTF-8 なので、判定対象の文字列も UTF-8 にしてからマッチしてください(非 UTF-8 文字列とのマッチは `Encoding::CompatibilityError` になります)。また、正規表現は入力を正規化できないため、NFD が混入しうる入力は事前に NFC 正規化してからマッチしてください(NFD のかなをそのまま `gsub` すると結合濁点だけが置換され、`encodable?` の `nfc: true` の判定とも食い違います)。
+
+```ruby
+"髙橋①".scan(Moji.unencodable(Encoding::Shift_JIS))   # => ["髙", "①"]
+```
+
 ## 既知の制限
 
 本家 1.6 互換の方針により、以下の挙動を意図的に維持しています(フラグ系のバグは v2.1 で修正済み。[#3](https://github.com/hazymoon/moji/issues/3))。改善の計画は「[ロードマップ](#ロードマップ)」の節と GitHub の [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。

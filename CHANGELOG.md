@@ -7,6 +7,14 @@
 
 ### 追加
 
+- 符号化可否判定 API `Moji.encodable?` / `Moji.unencodable` を追加
+  （[#14](https://github.com/hazymoon/moji/issues/14)）。文字列が
+  Shift_JIS / Windows-31J / EUC-JIS-2004 へ無損失に符号化できるかの判定と、
+  符号化できない文字にマッチする正規表現を提供する。判定の定義は
+  「Ruby の当該エンコーディングへ `String#encode` で変換できるか」で、
+  範囲表は Ruby 3.3 の変換表から生成した（`tools/gen_encodable_tables.rb`。
+  生成表と実行環境の変換表の一致は全コードポイントの replay テストが
+  CI の全 Ruby バージョンで機械検証する）
 - 文字列を受ける全関数（`type` / `type?` / 変換系 7 関数）に `nfc:`
   キーワード引数を追加（[#1](https://github.com/hazymoon/moji/issues/1)、
   既定 false）。有効にすると、文字列を返す関数は入力と結果の両方を、

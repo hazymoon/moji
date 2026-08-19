@@ -14,7 +14,7 @@ require "moji/version"
 #
 # どのエンコーディングの文字列を渡しても動作するが、String#encoding が正しく
 # 設定されている必要がある。正規表現を返す関数は Encoding.default_internal
-# (未設定の場合は UTF-8)用の正規表現を返す。
+# (未設定の場合は UTF-8)用の正規表現を返す({unencodable} のみ常に UTF-8 用)。
 #
 # @example 文字種判定
 #   Moji.type("漢")             # => Moji::ZEN_KANJI
@@ -333,9 +333,66 @@ module Moji
     end
   end
 
+  # 文字列 str の全文字が encoding へ無損失に符号化できるかを返す。
+  #
+  # 判定の定義は「Ruby の当該エンコーディングへ String#encode で変換できるか」で、
+  # 範囲表は Ruby の変換表から生成している(生成方法は tools/gen_encodable_tables.rb)。
+  # 対応エンコーディングは Shift_JIS / Windows-31J / EUC-JIS-2004 の 3 種。
+  # 符号化の成功は往復の同一性までは保証しない(例: ―(U+2015)は Shift_JIS /
+  # EUC-JIS-2004 で —(U+2014)と同一バイト列に写るため、復号すると U+2014 になる)。
+  #
+  # @param str [String] 判定する文字列(空文字列は true)
+  # @param encoding [Encoding, String] 判定対象のエンコーディング(名前文字列も可)。
+  #   対応外は ArgumentError。Encoding::SJIS は Ruby の別名解決に従い
+  #   Windows-31J として扱われる
+  # @param nfc [Boolean] 判定前に入力を NFC 正規化するか(既定 false)。NFD の
+  #   かな(結合濁点)はどのレガシーエンコーディングにも属さないため、NFD が
+  #   混入しうる入力では有効化を推奨
+  # @return [Boolean]
+  # @raise [ArgumentError] encoding が対応外のとき。UTF-8 の str が不正バイト列の
+  #   ときも走査の到達時点で発生する(符号化不能文字が先に見つかれば例外より先に
+  #   false を返す)
+  # @raise [Encoding::InvalidByteSequenceError] 非 UTF-8 の str が不正バイト列で
+  #   UTF-8 へ変換できないとき
+  # @raise [Encoding::UndefinedConversionError] 非 UTF-8 の str を UTF-8 へ
+  #   変換できないとき
+  # @example
+  #   Moji.encodable?("髙橋", Encoding::Windows_31J) # => true
+  #   Moji.encodable?("髙橋", Encoding::Shift_JIS)   # => false (髙 は IBM 拡張)
+  def encodable?(str, encoding, nfc: false)
+    _, (starts, ends) = Detail.encodable_lookup(encoding)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
+      s.each_codepoint.all? do |o|
+        # type の範囲表探索と同一の二分探索(境界を直すときは両方へ反映する)。
+        idx = starts.bsearch_index { |v| v > o }
+        idx = idx ? idx - 1 : starts.size - 1
+        idx >= 0 && o <= ends[idx]
+      end
+    end
+  end
+
+  # encoding へ符号化できない 1 文字にマッチする正規表現を返す。
+  #
+  # scan での洗い出しや gsub での置換に使える。結果はエンコーディングごとに
+  # メモ化する。返る正規表現は UTF-8 であり、非 UTF-8 文字列とのマッチは
+  # Encoding::CompatibilityError になる(判定対象は UTF-8 にしてからマッチすること)。
+  # 正規表現は入力を正規化できないため、NFD が混入しうる入力は事前に
+  # String#unicode_normalize(:nfc) してからマッチすること({encodable?} の
+  # nfc: true と判定を揃えるため)。
+  #
+  # @param encoding [Encoding, String] 判定対象のエンコーディング(名前文字列も可)。
+  #   対応の範囲は {encodable?} と同じ
+  # @return [Regexp]
+  # @example
+  #   "髙橋①".scan(Moji.unencodable(Encoding::Shift_JIS)) # => ["髙", "①"]
+  def unencodable(encoding)
+    enc, (starts, ends) = Detail.encodable_lookup(encoding)
+    Detail::UNENCODABLE_REGEXPS[enc] ||= Detail.build_unencodable_regexp(starts, ends)
+  end
+
   module_function(
     :type, :type?, :regexp, :zen_to_han, :han_to_zen, :normalize_zen_han, :upcase, :downcase,
-    :kata_to_hira, :hira_to_kata
+    :kata_to_hira, :hira_to_kata, :encodable?, :unencodable
   )
 
   # 文字種定数に対応する正規表現メソッドを定義する。
