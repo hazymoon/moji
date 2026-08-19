@@ -3,8 +3,8 @@
 require "test_helper"
 
 # Moji.upcase / Moji.downcase / Moji.kata_to_hira / Moji.hira_to_kata の
-# 現行実装（本家 1.6 相当）の実挙動を固定するゴールデンテスト。
-# 期待値はすべて現行実装を実行して得た実測値であり、直感に反するもの
+# 現行リリースの意図した挙動を固定するゴールデンテスト（本家 1.6 互換）。
+# 期待値はすべて現行リリースを実行して得た実測値であり、直感に反するもの
 # （バグに見えるもの）もそのまま固定する。
 class TestCaseAndKana < Minitest::Test
   include MojiTestHelpers

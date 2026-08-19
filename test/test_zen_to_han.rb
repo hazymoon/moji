@@ -3,7 +3,7 @@
 require "test_helper"
 
 # Moji.zen_to_han のゴールデンテスト。
-# 期待値はすべて現行実装（本家 1.6 相当）の実行結果を実測して固定したもの。
+# 期待値はすべて現行リリースの意図した挙動を実測して固定したもの（本家 1.6 互換）。
 # 直感に反する挙動もそのまま期待値としている（各テストの注記コメント参照）。
 class MojiZenToHanTest < Minitest::Test
   # 対応表の正データ（ZEN_TO_HAN_*_PAIRS / ZEN_JSYMBOL_UNCONVERTED_CHARS）は
