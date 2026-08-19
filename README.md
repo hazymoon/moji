@@ -202,13 +202,25 @@ Regexp.last_match.to_s                             # => "ドラえもん"
 
 ## 既知の制限
 
-本家 1.6 との完全互換(bug-for-bug)方針により、以下の挙動を意図的に維持しています。改善候補は [Issues](https://github.com/hazymoon/moji/issues)(`v2.1-candidate` ラベル)で追跡しています。
+本家 1.6 との完全互換(bug-for-bug)方針により、以下の挙動を意図的に維持しています。改善の計画は「[ロードマップ](#ロードマップ)」の節と GitHub の [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。
 
 - **`Moji.type?` は判定不能な文字に対して常に `true` を返します**([#3](https://github.com/hazymoon/moji/issues/3))。`Moji.type` が `nil` を返す文字(ハングル・絵文字・BMP 外など)では、どの文字種を渡しても `true` になります。「日本語の文字種に含まれるか」のバリデーションには `Moji.type` の `nil` 判定か正規表現を使ってください
 - **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)。結合文字ごと抽出したい場合は、UTF-8 限定で `Regexp.new("(?:#{Moji.kata})\\p{Mn}*")` のように結合マーク `\p{Mn}` を後置する正規表現を組んでください
 - **文字種判定の Unicode 範囲は本家のままです**([#4](https://github.com/hazymoon/moji/issues/4))。ヷヸヹヺ・ゔ・Ё・CJK 拡張 B 以降の漢字などは判定外(`nil`)で、罫線(`ZEN_LINE`)は U+2500〜U+256F を含みません
 - **`regexp` 系の `encoding` 引数には文字種依存の制限があります**([#5](https://github.com/hazymoon/moji/issues/5))。「Moji.regexp」の節を参照。また `Encoding.default_internal` を非 UTF-8 に設定すると、引数なしの `Moji.all` 等も同じ理由で例外になります
 - `normalize_zen_han` は全角・半角の統一のみを行い、Unicode 正規化(NFC/NFD の統一)は行いません([#1](https://github.com/hazymoon/moji/issues/1))
+
+## ロードマップ
+
+fork の分類は「文字種」(ひらがな・カタカナ・漢字などスクリプトとしての種別)と「レパートリー」(JIS X 0208 / Windows-31J / JIS X 0213:2004 のどの文字集合に収まるか)の 2 軸で整理し、段階的に導入する計画です。
+
+| 系列 | 方針 |
+| --- | --- |
+| v2.0 系 | 本家 1.6 と bug-for-bug 完全互換。挙動の変更は行わない(内部の高速化のみ) |
+| v2.1 | フラグ系の既知バグ修正([#3](https://github.com/hazymoon/moji/issues/3)。既定挙動の変更はこれのみ)、NFC 正規化のオプトイン追加([#1](https://github.com/hazymoon/moji/issues/1))、レパートリー判定 API の新設([#14](https://github.com/hazymoon/moji/issues/14))、非 UTF-8 対応の deprecation warning([#5](https://github.com/hazymoon/moji/issues/5)) |
+| v3.0 | 文字種判定の Unicode 準拠([#15](https://github.com/hazymoon/moji/issues/15))。かな範囲の拡張、`ZEN_GREEK` / `ZEN_CYRILLIC` / `ZEN_LINE` の文字種分類からレパートリー軸への移設、非 UTF-8 対応の削除を含む破壊的変更 |
+
+各リリースの内容の確定状況は [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。
 
 ## 開発
 
