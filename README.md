@@ -18,6 +18,12 @@ RubyGems.org では配布していません。Gemfile に git ソースで指定
 gem "moji", github: "hazymoon/moji"
 ```
 
+上記は既定ブランチ追従のため、`bundle update` でリリースを跨いで挙動が変わりえます(たとえば v2.1.0 は [#3](https://github.com/hazymoon/moji/issues/3) のフラグ系バグ修正を含みます。「[本家との差異](#本家との差異)」参照)。更新のタイミングを自分で決めたい場合は `tag:` でバージョンを固定してください。
+
+```ruby
+gem "moji", github: "hazymoon/moji", tag: "v2.1.0"
+```
+
 ## 使い方
 
 どのエンコーディングの文字列を渡しても動作しますが、`String#encoding` が正しく設定されている必要があります。正規表現を返す関数(`Moji.kata` など)は `Encoding.default_internal`(未設定の場合は UTF-8)用の正規表現を返します。その他のエンコーディング用の正規表現は `Moji.kata(Encoding::SJIS)` などで取得できます(文字種依存の制限あり。「[既知の制限](#既知の制限)」参照)。

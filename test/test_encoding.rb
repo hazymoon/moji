@@ -4,9 +4,10 @@ require "test_helper"
 
 # エンコーディング処理のゴールデンテスト。
 #
-# 期待値はすべて現行実装（本家 1.6 相当）を実行して得た実測値。直感に反するもの
-# （ASCII のみの文字種が US-ASCII 正規表現を返す、漢字・罫線だけ encoding 引数が
-# 無視される、Shift_JIS 入力の han_to_zen が例外になる等）も実挙動のまま固定する。
+# 期待値はすべて現行リリースの意図した挙動を実測して固定したもの（本家 1.6 互換）。
+# 直感に反するもの（ASCII のみの文字種が US-ASCII 正規表現を返す、漢字・罫線だけ
+# encoding 引数が無視される、Shift_JIS 入力の han_to_zen が例外になる等）も
+# そのまま固定する。
 class TestEncoding < Minitest::Test
   include MojiTestHelpers
 

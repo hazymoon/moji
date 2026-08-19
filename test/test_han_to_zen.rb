@@ -3,7 +3,7 @@
 require "test_helper"
 
 # Moji.han_to_zen / Moji.normalize_zen_han のゴールデンテスト。
-# 期待値はすべて現行実装（本家 1.6 相当）の実行結果を固定したもの。
+# 期待値はすべて現行リリースの意図した挙動を実測して固定したもの（本家 1.6 互換）。
 class TestHanToZen < Minitest::Test
   # 対応表の正データは test_helper の GoldenFixtures に集約している
   # （lib の Detail は private 実装なので参照しない）。

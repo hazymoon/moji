@@ -3,7 +3,14 @@
 このファイルの形式は [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
-## [2.1.0] - 未リリース
+## [2.1.0] - 2026-08-19
+
+既定挙動の変更は [#3](https://github.com/hazymoon/moji/issues/3) のフラグ系
+バグ修正のみ（README のロードマップで v2.1 の受け皿として予告済みのため
+minor バージョンとした。詳細は「修正（破壊的変更）」の節を参照）。
+v2.0.2 との既定経路（type / type? / 変換系関数）の全出力突合
+（BMP 63,488 コードポイント、`tools/compare_with_tag.rb`）で、
+差分が #3 起因の `type?` の変化（34,615 文字）のみであることを実測した。
 
 ### 追加
 
@@ -14,7 +21,8 @@
   「Ruby の当該エンコーディングへ `String#encode` で変換できるか」で、
   範囲表は Ruby 3.3 の変換表から生成した（`tools/gen_encodable_tables.rb`。
   生成表と実行環境の変換表の一致は全コードポイントの replay テストが
-  CI の全 Ruby バージョンで機械検証する）
+  CI の各 Ruby バージョンで機械検証する。ただし head ジョブは
+  continue-on-error のため、head での乖離検知は CI を赤くしない）
 - 文字列を受ける全関数（`type` / `type?` / 変換系 7 関数）に `nfc:`
   キーワード引数を追加（[#1](https://github.com/hazymoon/moji/issues/1)、
   既定 false）。有効にすると、文字列を返す関数は入力と結果の両方を、
