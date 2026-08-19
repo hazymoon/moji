@@ -10,10 +10,11 @@ moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔
 
 ## コマンド
 
-- テスト: `rake test`（Minitest。`mise x ruby@3.3 -- rake test` で 3.3 でも確認する）
+- テスト: `rake test`（Minitest。`mise x ruby@3.3 -- rake test` で 3.3 でも確認する。`bundle exec` を付けると bundler の依存解決エラーになるため付けない）
 - スタイル検査: `mise x ruby@3.3 -- rubocop`（rubocop は Ruby 3.3 環境にインストールされている）
 - gem ビルド: `gem build moji.gemspec`（バージョンは `lib/moji/version.rb`）
-- CI: GitHub Actions（Ruby 3.3 / 3.4 / head で test、3.3 で rubocop）
+- CI: GitHub Actions（Ruby 3.3 / 3.4 / head で test、3.3 で rubocop）。`test (head)` は continue-on-error の advisory 扱い（失敗してもチェックは成功表示。3.3 / 3.4 が必須ゲート）
+- PR のマージは rebase 方式（`gh pr merge --rebase --delete-branch`）。master は線形履歴を維持する
 
 ## アーキテクチャ
 
@@ -24,6 +25,7 @@ moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔
 - `han_to_zen` はカタカナ変換を JSYMBOL 変換より先に行う必要がある（濁点・半濁点記号が JSYMBOL に含まれるため。コード中にコメントあり）
 - 正規表現メソッド（`Moji.kata` 等）は定数群から `define_regexp_method` で動的生成される。文字種定数を追加すれば対応メソッドも自動で生える
 - 全公開関数は `Detail.convert_encoding` で入力を UTF-8 に正規化してから処理し、元エンコーディングに戻して返す。`nfc:` キーワード有効時は Unicode NFC 正規化(入力と文字列結果)も同所で担う
+- `moji.gemspec` の `s.files` はファイル明示列挙。lib へファイルを追加したら gemspec への追記が必要（漏れても `gem build` は成功し、CI の package ジョブのツリー外 `require` で初めて検出される）
 
 ## 互換性方針（最重要）
 
@@ -36,3 +38,4 @@ v2.0 系は本家 1.6 と**変換・判定結果の完全一致（bug-for-bug）
 
 - `lib/moji.rb` と `lib/moji/detail.rb` は UTF-8 のまま編集する。「〜」（U+301C）と「～」（U+FF5E）の書き分けや全角英数字等の Unicode 文字をリテラルに含むため、エンコーディング変換や Unicode 正規化を行うツールを通してはいけない
 - RuboCop の恒久方針は `.rubocop.yml` に、構造由来で当面容認する違反は `.rubocop_todo.yml` に記録している。todo の解消時は該当エントリを削除して違反ゼロを確認する
+- `test/test_nfc.rb` は見た目が同一で別コードポイントのリテラル（合成済み/NFD の「が」等）が隣接する。編集後は文字列リテラルの実コードポイントを ruby で列挙して意図と突合する。結合文字を含む行は Edit の old_string 照合が不安定なため、ファイル全体の Write で書き直すほうが安全
