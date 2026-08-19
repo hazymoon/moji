@@ -22,6 +22,8 @@ gem "moji", github: "hazymoon/moji"
 
 どのエンコーディングの文字列を渡しても動作しますが、`String#encoding` が正しく設定されている必要があります。正規表現を返す関数(`Moji.kata` など)は `Encoding.default_internal`(未設定の場合は UTF-8)用の正規表現を返します。その他のエンコーディング用の正規表現は `Moji.kata(Encoding::SJIS)` などで取得できます(文字種依存の制限あり。「[既知の制限](#既知の制限)」参照)。
 
+> **非推奨**: 非 UTF-8 文字列の入力と、正規表現系関数の非 UTF-8 エンコーディング(encoding 引数・`Encoding.default_internal` 由来とも)は v2.1 で deprecated となり、v3.0 で削除予定です([#5](https://github.com/hazymoon/moji/issues/5))。該当経路は `category: :deprecated` の警告を出します(表示には `Warning[:deprecated] = true` または `ruby -W:deprecated` が必要)。`Moji.encodable?` / `Moji.unencodable` は判定系のため対象外です(encoding 引数と `Moji.encodable?` への非 UTF-8 文字列入力を含めて v3.0 でも受け付けます)。US-ASCII は UTF-8 の部分集合のため対象外です(v3.0 でも受け付けます)。
+
 ```ruby
 require "moji"
 

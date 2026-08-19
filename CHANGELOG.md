@@ -26,6 +26,17 @@
   `ArgumentError` になる等の副作用がある（README の既知の制限を参照）。
   既定では従来と完全に同じ挙動（オブジェクト同一性を含む）を保つ
 
+### 非推奨
+
+- 非 UTF-8 対応（非 UTF-8 文字列の入力と、正規表現系関数の非 UTF-8
+  エンコーディング）を deprecated とした
+  （[#5](https://github.com/hazymoon/moji/issues/5)、v3.0 で削除予定）。
+  該当経路は `category: :deprecated` の警告を出す（既定では非表示。
+  `Warning[:deprecated] = true` か `ruby -W:deprecated` で表示される）。
+  `encodable?` / `unencodable` は判定系のため対象外
+  （encoding 引数と `encodable?` への非 UTF-8 文字列入力を含めて v3.0 でも受け付ける）。
+  US-ASCII も UTF-8 の部分集合のため対象外（v3.0 でも受け付ける）
+
 ### 修正（破壊的変更）
 
 - `Moji.type?` が判定不能な文字（`Moji.type` が `nil` を返す文字）に対して
