@@ -331,7 +331,7 @@ class TestRegexpAndFlags < Minitest::Test
   # ---- 実利用例（文字列補間） ----
 
   def test_zen_kata_interpolated_into_character_class
-    # 社内コードの実利用パターン。文字クラスの中に正規表現を補間している。
+    # 実利用コードに由来するパターン。文字クラスの中に正規表現を補間している。
     re = /\A[#{Moji.zen_kata}|ー|－]{1,20}\z/
     assert_equal("\\A[(?-mix:[ァ-ヶ])|ー|－]{1,20}\\z", re.source)
     assert_match(re, "ドラエモン")
