@@ -8,6 +8,9 @@ AllCops:
     - "pkg/**/*"
     - "doc/**/*"
     - "vendor/**/*"
+    # tools/gen_encodable_tables.rb による生成物(巨大なデータリテラル)。
+    # 内容の正しさは test_encodable.rb の全数 replay テストが機械検証する。
+    - "lib/moji/encodable_ranges.rb"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

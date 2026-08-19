@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
     "README.md",
     "lib/moji.rb",
     "lib/moji/detail.rb",
+    "lib/moji/encodable_ranges.rb",
     "lib/moji/flag_set_maker.rb",
     "lib/moji/version.rb",
   ]
