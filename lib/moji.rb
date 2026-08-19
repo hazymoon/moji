@@ -114,12 +114,15 @@ module Moji
   # 二分探索で行うため、CHAR_REGEXPS を実行時に差し替えても反映されない。
   #
   # @param ch [String] 判定する文字
+  # @param nfc [Boolean] 判定前に入力を NFC 正規化するか(既定 false)。合成・
+  #   置換で判定範囲を出入りする文字(ゔ・ヷヸヹヺ、BMP 外の CJK 互換漢字等)は
+  #   判定結果が既定と変わる(README の「既知の制限」参照)
   # @return [FlagSetMaker::Flags, nil] 基本文字種の定数。どの分類にも
   #   当てはまらない文字(ハングル、BMP 外の文字など)は nil
   # @example
   #   Moji.type("漢") # => Moji::ZEN_KANJI
-  def type(ch)
-    Detail.convert_encoding(ch) do |c|
+  def type(ch, nfc: false)
+    Detail.convert_encoding(ch, nfc: nfc) do |c|
       # ord は先頭 1 文字しか検査しないため、後続に不正バイトを含む文字列で
       # 従来(slice(/\A./m))が投げていた ArgumentError が消えてしまう。
       # 従来と同一の例外を保つため、不正バイト列には同じ操作を実行する。
@@ -143,12 +146,17 @@ module Moji
   #
   # @param ch [String] 判定する文字
   # @param tp [FlagSetMaker::Flags] 文字種(定数と、それらの `|` 合成)
+  # @param nfc [Boolean] 判定前に入力を NFC 正規化するか(既定 false)。合成・
+  #   置換で判定範囲を出入りする文字(ゔ・ヷヸヹヺ、BMP 外の CJK 互換漢字等)は
+  #   判定結果が既定と変わる(README の「既知の制限」参照)
   # @return [Boolean]
   # @example
   #   Moji.type?("Ａ", Moji::ZEN) # => true
   #   Moji.type?("한", Moji::ZEN) # => false
-  def type?(ch, tp)
-    Detail.convert_encoding(ch) do |c|
+  def type?(ch, tp, nfc: false)
+    Detail.convert_encoding(ch, nfc: nfc) do |c|
+      # 内側の type には nfc を渡さない(入口で正規化済み。冪等なので渡しても
+      # 結果は同じだが、適用は公開入口の 1 回に限る設計とする)。
       tp.include?(type(c))
     end
   end
@@ -186,12 +194,16 @@ module Moji
   #
   # @param str [String] 変換する文字列
   # @param tp [FlagSetMaker::Flags] 変換対象とする文字種
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。NFD の
+  #   全角カナを含む入力では、有効にしないと「半角カナ + 結合濁点」という
+  #   CP932 等へ変換できない列が生じる(README の「既知の制限」参照)。
+  #   ワ行 + 結合濁点は合成先 ヷヸヹヺ が変換範囲外のため半角化されない
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.zen_to_han("Ｒｕｂｙ！？")                # => "Ruby!?"
   #   Moji.zen_to_han("Ｒｕｂｙ！？", Moji::ALPHA)   # => "Ruby！？"
-  def zen_to_han(str, tp = ALL)
-    Detail.convert_encoding(str) do |s|
+  def zen_to_han(str, tp = ALL, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       s = s.gsub(Detail::ZEN_KATA_REGEXP, Detail::ZEN_TO_HAN_KATA_TABLE) if tp.include?(ZEN_KATA)
       s = s.tr("ａ-ｚ", "a-z") if tp.include?(ZEN_LOWER)
       s = s.tr("Ａ-Ｚ", "A-Z") if tp.include?(ZEN_UPPER)
@@ -206,12 +218,14 @@ module Moji
   #
   # @param str [String] 変換する文字列
   # @param tp [FlagSetMaker::Flags] 変換対象とする文字種
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。入口の
+  #   合成により A + 結合アクセントのような分解列は全角化の対象から外れる点に注意
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.han_to_zen("Ruby!?")                 # => "Ｒｕｂｙ！？"
   #   Moji.han_to_zen("Ruby!?", Moji::SYMBOL)   # => "Ruby！？"
-  def han_to_zen(str, tp = ALL)
-    Detail.convert_encoding(str) do |s|
+  def han_to_zen(str, tp = ALL, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       # [半]濁音記号がJSYMBOLに含まれるので、KATAの変換をJSYMBOLより前にやる必要あり。
       if tp.include?(HAN_KATA)
         # カナ用の合成正規表現は解決後エンコーディングごとにメモ化する。
@@ -237,9 +251,15 @@ module Moji
   # それ以外の記号とカタカナ(JSYMBOL|HAN_KATA)を全角に変換する。
   #
   # @param str [String] 変換する文字列
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。有効に
+  #   すると「半角カナ + 結合濁点」「NFD の全角かな」も合成済みの全角へ収束する
+  #   (ｦﾞ は本家由来のフォールバックで「ヲ + 非結合の濁点記号」になるため対象外。
+  #   収束先が ヷヸヹヺ になる組は Windows-31J 等へ戻せない)
   # @return [String] 変換結果(エンコーディングは入力と同じ)
-  def normalize_zen_han(str)
-    Detail.convert_encoding(str) do |s|
+  def normalize_zen_han(str, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
+      # 内側の han_to_zen / zen_to_han には nfc を渡さない(入口で正規化済み。
+      # 出口の NFC は外側の convert_encoding が適用する)。
       zen_to_han(han_to_zen(s, HAN_JSYMBOL | HAN_KATA), ZEN_ALNUM | ZEN_ASYMBOL)
     end
   end
@@ -250,11 +270,13 @@ module Moji
   #
   # @param str [String] 変換する文字列
   # @param tp [FlagSetMaker::Flags] 変換対象とする文字種
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。入口の
+  #   合成により e + 結合アクセントのような分解列が変換対象から外れる点に注意
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.upcase("Ｒｕｂｙ") # => "ＲＵＢＹ"
-  def upcase(str, tp = LOWER)
-    Detail.convert_encoding(str) do |s|
+  def upcase(str, tp = LOWER, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       s = s.tr("a-z", "A-Z") if tp.include?(HAN_LOWER)
       s = s.tr("ａ-ｚ", "Ａ-Ｚ") if tp.include?(ZEN_LOWER)
       s
@@ -267,11 +289,13 @@ module Moji
   #
   # @param str [String] 変換する文字列
   # @param tp [FlagSetMaker::Flags] 変換対象とする文字種
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。入口の
+  #   合成により E + 結合アクセントのような分解列が変換対象から外れる点に注意
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.downcase("Ｒｕｂｙ") # => "ｒｕｂｙ"
-  def downcase(str, tp = UPPER)
-    Detail.convert_encoding(str) do |s|
+  def downcase(str, tp = UPPER, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       s = s.tr("A-Z", "a-z") if tp.include?(HAN_UPPER)
       s = s.tr("Ａ-Ｚ", "ａ-ｚ") if tp.include?(ZEN_UPPER)
       s
@@ -283,11 +307,14 @@ module Moji
   # 半角カタカナは直接変換できない。{han_to_zen} で全角にしてから変換すること。
   #
   # @param str [String] 変換する文字列
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。合成先が
+  #   変換範囲外の ヴ・ヷヸヹヺ になる分解列は変換されない(README の
+  #   「既知の制限」参照)
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.kata_to_hira("ルビー") # => "るびー"
-  def kata_to_hira(str)
-    Detail.convert_encoding(str) do |s|
+  def kata_to_hira(str, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       s.tr("ァ-ン", "ぁ-ん")
     end
   end
@@ -295,11 +322,13 @@ module Moji
   # 文字列 str のひらがなを全角カタカナに変換して返す。
   #
   # @param str [String] 変換する文字列
+  # @param nfc [Boolean] 入力と結果を NFC 正規化するか(既定 false)。合成先が
+  #   変換範囲外の ゔ になる分解列は変換されない(README の「既知の制限」参照)
   # @return [String] 変換結果(エンコーディングは入力と同じ)
   # @example
   #   Moji.hira_to_kata("るびー") # => "ルビー"
-  def hira_to_kata(str)
-    Detail.convert_encoding(str) do |s|
+  def hira_to_kata(str, nfc: false)
+    Detail.convert_encoding(str, nfc: nfc) do |s|
       s.tr("ぁ-ん", "ァ-ン")
     end
   end

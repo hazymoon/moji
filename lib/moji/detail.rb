@@ -166,18 +166,30 @@ module Moji
     # 入力を UTF-8 に正規化してブロックを評価し、結果が文字列なら
     # 元エンコーディングへ戻して返す。
     #
+    # nfc を有効にすると、UTF-8 化した入力とブロックの文字列結果の両方へ
+    # NFC 正規化を適用する。出力側の適用は省略できない: han_to_zen の
+    # カナ用正規表現は半角の濁点記号(U+FF9E/FF9F)しか拾わないため、
+    # 「半角カナ + 結合濁点(U+3099)」の入力からは NFC でない中間列
+    # (全角カナ + U+3099)が生じ、これを合成するのは出口の NFC だけである。
+    #
     # @param str [String] 入力文字列
+    # @param nfc [Boolean] 入力と文字列結果を NFC 正規化するか
     # @yieldparam utf8_str [String] UTF-8 化した入力
     # @return [Object] ブロックの評価結果(文字列なら元エンコーディングへ変換済み)
-    def self.convert_encoding(str)
+    def self.convert_encoding(str, nfc: false)
       orig_enc = str.encoding
-      if orig_enc == Encoding::UTF_8
+      if orig_enc == Encoding::UTF_8 && !nfc
         # 無駄なコピーを避けるためにencodeを呼ばない。
-        yield(str)
-      else
-        result = yield(str.encode(Encoding::UTF_8))
-        result.is_a?(String) ? result.encode(orig_enc) : result
+        return yield(str)
       end
+
+      utf8 = orig_enc == Encoding::UTF_8 ? str : str.encode(Encoding::UTF_8)
+      utf8 = utf8.unicode_normalize(:nfc) if nfc
+      result = yield(utf8)
+      return result unless result.is_a?(String)
+
+      result = result.unicode_normalize(:nfc) if nfc
+      orig_enc == Encoding::UTF_8 ? result : result.encode(orig_enc)
     end
   end
 end
