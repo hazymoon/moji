@@ -96,6 +96,8 @@ Regexp.last_match.to_s                             # => "ドラえもん"
 
 ## モジュール関数
 
+文字列を受ける関数(`Moji.regexp` と正規表現メソッドを除くすべて)は、v2.1 で追加された `nfc:` キーワード引数(既定 false)を持ちます。有効にすると入力と結果を NFC 正規化します(挙動の詳細と副作用は「[既知の制限](#既知の制限)」の結合文字の項を参照)。
+
 ### `Moji.type(ch)`
 
 文字 `ch` の文字種を返します。「一番細かい分類」の定数のうち 1 つを返します。
@@ -207,10 +209,10 @@ Regexp.last_match.to_s                             # => "ドラえもん"
 
 本家 1.6 互換の方針により、以下の挙動を意図的に維持しています(フラグ系のバグは v2.1 で修正済み。[#3](https://github.com/hazymoon/moji/issues/3))。改善の計画は「[ロードマップ](#ロードマップ)」の節と GitHub の [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。
 
-- **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)。結合文字ごと抽出したい場合は、UTF-8 限定で `Regexp.new("(?:#{Moji.kata})\\p{Mn}*")` のように結合マーク `\p{Mn}` を後置する正規表現を組んでください
+- **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、v2.1 で追加された `nfc: true` キーワード引数(文字列を受ける全関数で利用可)を渡すか、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)。`nfc: true` は入力と結果の両方を NFC 正規化します(結果が文字列でない `type` / `type?` は入力のみ)。ただし入力が既に「半角カナ + 結合濁点」の場合の `zen_to_han` は `nfc: true` でも救えません(この組は NFC で合成されないため。`han_to_zen` / `normalize_zen_han` を経由すれば合成済みの全角へ畳めます)。また NFC 自体の副作用があります: (1) CJK 互換漢字が標準字体へ置換されます(神 U+FA19 → 神 U+795E など。Windows-31J の IBM 拡張に 22 字(U+FA10〜U+FA2D の 20 字と U+F929(朗)・U+F9DC(隆))が該当し、人名の字体が静かに変わりえます) (2) Å(U+212B)・凞(U+FA15)・蘒(U+FA20)は合成後のコードポイントを Windows-31J へ戻せないため、これらを含む非 UTF-8 入力では既定なら成功する変換が `Encoding::UndefinedConversionError` になります (3) e + 結合アクセントのような分解列は入口で合成され、`upcase` / `downcase` の大文字小文字変換や `han_to_zen` の全角化の対象から外れます (4) `ｦﾞ`(半角ヲ + 半角濁点)の全角化結果は本家由来のフォールバックで「ヲ + 非結合の濁点記号」になるため NFC でも合成されません (5) 「う・ワ行 + 結合濁点」は ゔ(U+3094)・ヷヸヹヺ(U+30F7〜U+30FA)へ合成されますが、これらは本家由来の判定・変換範囲([#4](https://github.com/hazymoon/moji/issues/4))の外のため、既定なら基底文字で判定・変換されていたものが、`type` / `type?` では `nil` / false へ変わり、`kata_to_hira` / `hira_to_kata` / `zen_to_han` では変換されずに残ります(合成先のうち ヷヸヹヺ は Windows-31J にも無いため、この組では CP932 等への変換も引き続き失敗します)。逆に BMP 外の CJK 互換漢字(U+2F804 等)は BMP の統合漢字へ置換され、`type` が `nil` から `ZEN_KANJI` へ変わります (6) 不正バイト列を含む入力は入口の正規化が `ArgumentError` を投げるため、既定では変換対象が無く素通りしていた呼び出しも例外になります。結合文字ごと抽出したい場合は、UTF-8 限定で `Regexp.new("(?:#{Moji.kata})\\p{Mn}*")` のように結合マーク `\p{Mn}` を後置する正規表現を組んでください
 - **文字種判定の Unicode 範囲は本家のままです**([#4](https://github.com/hazymoon/moji/issues/4))。ヷヸヹヺ・ゔ・Ё・CJK 拡張 B 以降の漢字などは判定外(`nil`)で、罫線(`ZEN_LINE`)は U+2500〜U+256F を含みません
 - **`regexp` 系の `encoding` 引数には文字種依存の制限があります**([#5](https://github.com/hazymoon/moji/issues/5))。「Moji.regexp」の節を参照。また `Encoding.default_internal` を非 UTF-8 に設定すると、引数なしの `Moji.all` 等も同じ理由で例外になります
-- `normalize_zen_han` は全角・半角の統一のみを行い、Unicode 正規化(NFC/NFD の統一)は行いません([#1](https://github.com/hazymoon/moji/issues/1))
+- `normalize_zen_han` は既定では全角・半角の統一のみを行い、Unicode 正規化(NFC/NFD の統一)は行いません([#1](https://github.com/hazymoon/moji/issues/1))。`nfc: true` を渡すと入出力とも NFC 正規化され、「半角カナ + 結合濁点」「NFD の全角かな」も合成済みの全角へ収束します。ただし収束先が ヷヸヹヺ になる組は Windows-31J に無いため CP932 等へは戻せません
 
 ## ロードマップ
 
