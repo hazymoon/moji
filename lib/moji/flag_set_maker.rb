@@ -78,13 +78,19 @@ module Moji
       end
 
       def include?(flags)
+        # 本家 1.6 では nil.to_i == 0 により include?(nil) が常に true になり、
+        # Moji.type? が判定不能な文字へ true を返す原因だった。v2.1 で明示拒否に
+        # 修正した（#3）。& / | の nil 受理（同根の to_i 暗黙変換）は #17 で追跡。
+        return false if flags.nil?
+
         @value.allbits?(flags.to_i)
       end
 
-      # 歴史的経緯: 本家 1.6 から論理が反転しており、値が非ゼロのとき true を返す。
-      # bug-for-bug 互換のため本家の挙動を維持している。
+      # 歴史的経緯: 本家 1.6 では論理が反転しており（実装が @value != 0）、
+      # 値が非ゼロのとき true を返していた。v2.0 系までは bug-for-bug 互換のため
+      # 維持していたが、v2.1 で名前どおりの意味（値 0 のとき true）へ修正した（#3）。
       def empty?
-        @value != 0
+        @value.zero?
       end
 
       protected

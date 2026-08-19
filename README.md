@@ -2,9 +2,9 @@
 
 日本語の文字種判定、文字種変換(半角→全角、ひらがな→カタカナなど)を行う Ruby ライブラリです。
 
-[gimite/moji](https://github.com/gimite/moji) 1.6 の fork で、公開 API と変換・判定結果の互換性を保ったまま Ruby 3.3 以降に対応しています。
+[gimite/moji](https://github.com/gimite/moji) 1.6 の fork で、公開 API と変換・判定結果の互換性を基本方針として Ruby 3.3 以降に対応しています(v2.1 でフラグ系の既知バグのみ修正。[#3](https://github.com/hazymoon/moji/issues/3))。
 
-> **English**: moji is a Ruby library for Japanese character type classification and conversion (half-width ↔ full-width, hiragana ↔ katakana, upper ↔ lower case). This is a fork of [gimite/moji](https://github.com/gimite/moji) 1.6, modernized for Ruby 3.3+ while keeping full API and behavioral compatibility.
+> **English**: moji is a Ruby library for Japanese character type classification and conversion (half-width ↔ full-width, hiragana ↔ katakana, upper ↔ lower case). This is a fork of [gimite/moji](https://github.com/gimite/moji) 1.6, modernized for Ruby 3.3+ while keeping API and behavioral compatibility, except for an agreed flag-handling bug fix in v2.1 ([#3](https://github.com/hazymoon/moji/issues/3)).
 
 ## 対応環境
 
@@ -108,10 +108,13 @@ Moji.type("漢")   # => Moji::ZEN_KANJI
 
 ### `Moji.type?(ch, type)`
 
-文字 `ch` が文字種 `type` に含まれれば `true` を返します。`type` には全ての定数と、それらを `|` で結んだものを使えます。
+文字 `ch` が文字種 `type` に含まれれば `true` を返します。`type` には全ての定数と、それらを `|` で結んだものを使えます。`Moji.type` が `nil` を返す文字(ハングル・絵文字・BMP 外など判定不能な文字)と空文字列には、どの文字種を渡しても `false` を返します(v2.0 系までは本家 1.6 のバグを維持して常に `true` でした。[#3](https://github.com/hazymoon/moji/issues/3))。
+
+v2.0 系で「日本語の文字種に含まれるか」のバリデーションを行う場合は、従来どおり `Moji.type` の `nil` 判定か正規表現を使ってください。この回避策は v2.1 以降でも同じ結果を返すため、移行時にそのまま残して問題ありません。
 
 ```ruby
 Moji.type?("Ａ", Moji::ZEN)   # => true
+Moji.type?("한", Moji::ZEN)   # => false (v2.0 系までは true)
 ```
 
 ### `Moji.regexp(type[, encoding])`
@@ -202,9 +205,8 @@ Regexp.last_match.to_s                             # => "ドラえもん"
 
 ## 既知の制限
 
-本家 1.6 との完全互換(bug-for-bug)方針により、以下の挙動を意図的に維持しています。改善の計画は「[ロードマップ](#ロードマップ)」の節と GitHub の [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。
+本家 1.6 互換の方針により、以下の挙動を意図的に維持しています(フラグ系のバグは v2.1 で修正済み。[#3](https://github.com/hazymoon/moji/issues/3))。改善の計画は「[ロードマップ](#ロードマップ)」の節と GitHub の [milestones](https://github.com/hazymoon/moji/milestones) を参照してください。
 
-- **`Moji.type?` は判定不能な文字に対して常に `true` を返します**([#3](https://github.com/hazymoon/moji/issues/3))。`Moji.type` が `nil` を返す文字(ハングル・絵文字・BMP 外など)では、どの文字種を渡しても `true` になります。「日本語の文字種に含まれるか」のバリデーションには `Moji.type` の `nil` 判定か正規表現を使ってください
 - **文字列はコードポイント単位で処理されます**([#1](https://github.com/hazymoon/moji/issues/1))。結合文字列(NFD 形式のかな・結合アクセント・異体字セレクタ)は基底文字だけが変換・マッチの対象になります。特に NFD の全角カナを `zen_to_han` すると「半角カナ + 結合濁点」という CP932 等へ変換できない列が生じ、後段の `encode` で初めて失敗します。NFD が混入しうる入力(HFS+ 由来のファイル名・ZIP・macOS からのアップロード等)は、呼び出し前に `unicode_normalize(:nfc)` してください(NFKC は全角・半角の区別ごと潰すため使わないでください)。結合文字ごと抽出したい場合は、UTF-8 限定で `Regexp.new("(?:#{Moji.kata})\\p{Mn}*")` のように結合マーク `\p{Mn}` を後置する正規表現を組んでください
 - **文字種判定の Unicode 範囲は本家のままです**([#4](https://github.com/hazymoon/moji/issues/4))。ヷヸヹヺ・ゔ・Ё・CJK 拡張 B 以降の漢字などは判定外(`nil`)で、罫線(`ZEN_LINE`)は U+2500〜U+256F を含みません
 - **`regexp` 系の `encoding` 引数には文字種依存の制限があります**([#5](https://github.com/hazymoon/moji/issues/5))。「Moji.regexp」の節を参照。また `Encoding.default_internal` を非 UTF-8 に設定すると、引数なしの `Moji.all` 等も同じ理由で例外になります
@@ -231,14 +233,14 @@ $ bundle exec rubocop        # スタイル検査
 $ gem build moji.gemspec     # gem ビルド
 ```
 
-テストスイートは本家 1.6 の実挙動を固定したゴールデンテストです。変換・判定結果の変更(Unicode 範囲の拡張など)は互換性方針の変更を伴うため、テストの期待値変更とセットで議論してください。
+テストスイートは現行リリースの意図した挙動を固定したゴールデンテストです(v2.0 系までは本家 1.6 の実挙動そのもの。v2.1 でフラグ系の期待値のみ [#3](https://github.com/hazymoon/moji/issues/3) の修正後の挙動に更新)。変換・判定結果の変更(Unicode 範囲の拡張など)は互換性方針の変更を伴うため、テストの期待値変更とセットで議論してください。
 
 ## 本家との差異
 
 - 対応 Ruby を 3.3 以降に変更(Ruby 1.8/1.9 対応コードを削除)
 - `eval` + ヒアドキュメントによるロード構造を通常のモジュール定義へ書き換え
 - `FlagSetMaker` を `Moji::FlagSetMaker` へ移動(`Moji` の公開 API は無変更)
-- 公開 API・変換・判定結果は本家 1.6 と完全互換(bug-for-bug)。既知の制限(全角カタカナ判定が `ァ-ヶ` の範囲で `ヷヸヹヺ` を含まない、漢字判定が CJK 拡張 B 以降非対応など)もそのまま維持
+- v2.0 系までは公開 API・変換・判定結果とも本家 1.6 と完全互換(bug-for-bug)。v2.1 でフラグ系の既知バグ(`Moji.type?` の判定不能文字への常時 `true`・`Flags#empty?` の論理反転)を修正([#3](https://github.com/hazymoon/moji/issues/3))。それ以外の既知の制限(全角カタカナ判定が `ァ-ヶ` の範囲で `ヷヸヹヺ` を含まない、漢字判定が CJK 拡張 B 以降非対応など)はそのまま維持
 
 詳細は [CHANGELOG.md](CHANGELOG.md) を参照。
 

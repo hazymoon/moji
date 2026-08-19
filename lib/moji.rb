@@ -137,11 +137,16 @@ module Moji
 
   # 文字 ch が文字種 tp に含まれるかを返す。
   #
+  # type が nil を返す文字(ハングル、BMP 外の文字など)と空文字列には、
+  # どの文字種を渡しても false を返す(v2.0 系までは本家 1.6 のバグを維持して
+  # 常に true だった。#3)。
+  #
   # @param ch [String] 判定する文字
   # @param tp [FlagSetMaker::Flags] 文字種(定数と、それらの `|` 合成)
   # @return [Boolean]
   # @example
   #   Moji.type?("Ａ", Moji::ZEN) # => true
+  #   Moji.type?("한", Moji::ZEN) # => false
   def type?(ch, tp)
     Detail.convert_encoding(ch) do |c|
       tp.include?(type(c))

@@ -3,8 +3,10 @@
 require "test_helper"
 
 # Moji.regexp / 動的正規表現メソッド / フラグ定数の振る舞いを固定するゴールデンテスト。
-# 期待値はすべて現行実装（本家 1.6 相当）の実行結果から採取している。
-# 直感に反する挙動（バグに見えるもの）もそのまま固定する。
+# 期待値は現行リリースの意図した挙動を固定したもの。v2.0 系までは本家 1.6 の
+# 実行結果（バグ込み）を固定していたが、v2.1 で include?(nil) の素通しと
+# empty? の論理反転を修正した（#3）。それ以外の直感に反する挙動は本家互換の
+# ままそのまま固定する。
 class TestRegexpAndFlags < Minitest::Test
   include MojiTestHelpers
 
@@ -449,18 +451,23 @@ class TestRegexpAndFlags < Minitest::Test
     refute(Moji::ZEN_KANA.include?(Moji::HAN_KATA))
   end
 
-  def test_flag_include_with_nil_returns_true
-    # nil.to_i == 0 になるため、どのフラグも nil を「含む」と答える。
-    # Moji.type? が未知の文字（type が nil）に対して true を返す原因。
-    assert(Moji::HAN_UPPER.include?(nil))
-    assert(Moji::ALL.include?(nil))
+  def test_flag_include_with_nil_returns_false
+    # 本家 1.6 では nil.to_i == 0 によりどのフラグも nil を「含む」と答えていた
+    # （Moji.type? が未知の文字に true を返す原因）。v2.1 で nil を明示拒否した（#3）。
+    # なお & / | の nil 受理（同根の to_i 暗黙変換）は #17 で別途追跡している。
+    refute(Moji::HAN_UPPER.include?(nil))
+    refute(Moji::ALL.include?(nil))
+    # 値 0 のフラグは旧実装なら allbits?(0) で true になっていた境界。
+    # nil ガードが先に効いて false になることを固定する。
+    refute((Moji::HAN & Moji::ZEN).include?(nil))
   end
 
-  def test_empty_p_is_inverted
-    # empty? の実装は @value != 0 を返しており、名前と意味が逆。
-    assert(Moji::ALL.empty?, "ビットが立っているのに empty? は true")
+  def test_empty_p_reflects_zero_value
+    # 本家 1.6 では実装が @value != 0 を返しており名前と意味が逆だった。
+    # v2.1 で「値 0 のとき true」という名前どおりの意味へ修正した（#3）。
+    refute(Moji::ALL.empty?, "ビットが立っているので empty? は false")
     # rubocop:disable Style/ArrayIntersect -- Flags の & は Array ではないので intersect? に書き換えてはいけない
-    refute((Moji::HAN & Moji::ZEN).empty?, "ビットが 0 なのに empty? は false")
+    assert((Moji::HAN & Moji::ZEN).empty?, "ビットが 0 なので empty? は true")
     # rubocop:enable Style/ArrayIntersect
   end
 
