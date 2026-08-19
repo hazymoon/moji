@@ -317,6 +317,15 @@ class TestRegexpAndFlags < Minitest::Test
     assert_equal(utf8_before.source, utf8_after.source)
   end
 
+  # regexp の tp は Flags のみを受け付け、Flags でない引数は本家どおり
+  # tp.include? の NoMethodError になる（メモ化キャッシュに同値の Flags が
+  # 載っていても、Integer や nil がキャッシュにヒットして成功してはいけない）。
+  def test_regexp_rejects_non_flags_argument_even_after_memoization
+    Moji.regexp(Moji::HIRA) # 同値の Flags でキャッシュを温める
+    assert_raises(NoMethodError) { Moji.regexp(Moji::HIRA.to_i) }
+    assert_raises(NoMethodError) { Moji.regexp(nil) }
+  end
+
   # ---- 実利用例（文字列補間） ----
 
   def test_zen_kata_interpolated_into_character_class

@@ -74,7 +74,9 @@ module Moji
   # {Moji.type} は挿入順に走査して最初にマッチした文字種を返すため、
   # エントリの順序に意味がある(例: 仝 は ZEN_KANJI の範囲だが ZEN_JSYMBOL が先に取る)。
   # 本家 1.6 ではこの Hash は可変で、利用者が判定範囲を差し替える余地があった。
-  # bug-for-bug 互換のため freeze しない。
+  # bug-for-bug 互換のため freeze しないが、v2 の高速化実装（type の範囲表・
+  # regexp のメモ化・変換系の事前計算テーブル）は実行時の差し替えに追随しない
+  # （各メソッドのコメントを参照）。差し替えの実効性は初回呼び出し前に限られる。
   CHAR_REGEXPS = { # rubocop:disable Style/MutableConstant
     HAN_CONTROL => /[\x00-\x1f\x7f]/,
     HAN_ASYMBOL =>
@@ -99,9 +101,11 @@ module Moji
 
   # type の二分探索用に TYPE_RANGE_DATA の定数名を Flags オブジェクトへ解決し、
   # 列ごとの配列に展開する(先頭コードポイントの配列は昇順)。
-  Detail::TYPE_RANGE_STARTS = Detail::TYPE_RANGE_DATA.map { |r| r[0] }.freeze
-  Detail::TYPE_RANGE_ENDS = Detail::TYPE_RANGE_DATA.map { |r| r[1] }.freeze
-  Detail::TYPE_RANGE_FLAGS = Detail::TYPE_RANGE_DATA.map { |r| const_get(r[2]) }.freeze
+  # 文字種定数に依存する派生値なので Detail 側ではなくここで定義し、公開しない。
+  TYPE_RANGE_STARTS = Detail::TYPE_RANGE_DATA.map { |r| r[0] }.freeze
+  TYPE_RANGE_ENDS = Detail::TYPE_RANGE_DATA.map { |r| r[1] }.freeze
+  TYPE_RANGE_FLAGS = Detail::TYPE_RANGE_DATA.map { |r| const_get(r[2]) }.freeze
+  private_constant(:TYPE_RANGE_STARTS, :TYPE_RANGE_ENDS, :TYPE_RANGE_FLAGS)
 
   # 文字 ch の文字種を返す。
   #
@@ -124,9 +128,9 @@ module Moji
         nil
       else
         o = c.ord
-        idx = Detail::TYPE_RANGE_STARTS.bsearch_index { |s| s > o }
-        idx = idx ? idx - 1 : Detail::TYPE_RANGE_STARTS.size - 1
-        idx >= 0 && o <= Detail::TYPE_RANGE_ENDS[idx] ? Detail::TYPE_RANGE_FLAGS[idx] : nil
+        idx = TYPE_RANGE_STARTS.bsearch_index { |s| s > o }
+        idx = idx ? idx - 1 : TYPE_RANGE_STARTS.size - 1
+        idx >= 0 && o <= TYPE_RANGE_ENDS[idx] ? TYPE_RANGE_FLAGS[idx] : nil
       end
     end
   end
@@ -148,7 +152,8 @@ module Moji
   #
   # 合成結果は文字種と解決後エンコーディングをキーにメモ化するため、
   # 同じ組み合わせの呼び出しは同一の Regexp オブジェクトを返す。
-  # CHAR_REGEXPS を実行時に差し替えてもメモ化済みの結果には反映されない。
+  # CHAR_REGEXPS は各キーの初回呼び出し時点の内容で固定され、以後の
+  # 実行時差し替え（元に戻す変更を含む）はメモ化済みの結果に反映されない。
   #
   # @param tp [FlagSetMaker::Flags] 文字種(定数と、それらの `|` 合成)
   # @param encoding [Encoding, nil] 返す正規表現のエンコーディング。省略時は
@@ -159,7 +164,9 @@ module Moji
   def regexp(tp, encoding = nil)
     encoding ||= Encoding.default_internal || Encoding::UTF_8
     cache = Detail::REGEXP_CACHE
-    key = [tp.to_i, encoding]
+    # キーは Flags 自体（to_i ではない）。Integer 等の Flags でない引数を
+    # キャッシュにヒットさせず、従来どおり tp.include? の NoMethodError に落とすため。
+    key = [tp, encoding]
     cached = cache[key]
     return cached if cached
 
@@ -201,10 +208,15 @@ module Moji
   def han_to_zen(str, tp = ALL)
     Detail.convert_encoding(str) do |s|
       # [半]濁音記号がJSYMBOLに含まれるので、KATAの変換をJSYMBOLより前にやる必要あり。
-      # 正規表現は han_kata (= Moji.regexp(HAN_KATA)) を毎回埋め込む動的構築のまま
-      # 維持する(定数化すると Encoding.default_internal 非 UTF-8 時の RegexpError が
-      # 消えて挙動が変わるため)。
-      s = s.gsub(/(#{han_kata})([ﾞﾟ]?)/, Detail::HAN_TO_ZEN_KATA_TABLE) if tp.include?(HAN_KATA)
+      if tp.include?(HAN_KATA)
+        # カナ用の合成正規表現は解決後エンコーディングごとにメモ化する。
+        # 単純な定数化は Encoding.default_internal 非 UTF-8 時の RegexpError を
+        # 消して挙動を変えるため不可。合成が例外になる組はメモ化されないため、
+        # 従来どおり呼び出しごとに同じ RegexpError を投げ続ける。
+        enc = Encoding.default_internal || Encoding::UTF_8
+        reg = Detail::HAN_TO_ZEN_KATA_REGEXPS[enc] ||= /(#{regexp(HAN_KATA, enc)})([ﾞﾟ]?)/
+        s = s.gsub(reg, Detail::HAN_TO_ZEN_KATA_TABLE)
+      end
       s = s.tr("a-z", "ａ-ｚ") if tp.include?(HAN_LOWER)
       s = s.tr("A-Z", "Ａ-Ｚ") if tp.include?(HAN_UPPER)
       s = s.tr("0-9", "０-９") if tp.include?(HAN_NUMBER)

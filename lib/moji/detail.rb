@@ -55,14 +55,20 @@ module Moji
     end
     HAN_TO_ZEN_KATA_TABLE.freeze
 
-    # Moji.regexp の合成結果のメモ化。キーは [文字種の整数値, 解決後エンコーディング]。
+    # Moji.regexp の合成結果のメモ化。キーは [文字種(Flags), 解決後エンコーディング]。
     # 解決後エンコーディングをキーに含めるため、Encoding.default_internal の
-    # 実行時変更にも正しく追随する。一方 CHAR_REGEXPS の実行時差し替えには
-    # 追随しない(キャッシュ済みの合成結果を返し続ける)。
+    # 実行時変更にも正しく追随する。一方 CHAR_REGEXPS は各キーの初回呼び出し
+    # 時点の内容で固定され、以後の差し替え(元に戻す変更を含む)には追随しない。
     # 任意の | 合成もキーになりうるため、エントリ数に上限を設けて超過分は
     # メモ化せず都度合成する(メモリを有界に保つ)。
     REGEXP_CACHE = {} # rubocop:disable Style/MutableConstant -- キャッシュとして書き込む
     REGEXP_CACHE_LIMIT = 100
+
+    # han_to_zen のカナ用合成正規表現(半角カナ 1 文字 + 濁点/半濁点 0〜1 個)の
+    # メモ化。キーは解決後エンコーディング(取りうる値が有限なので上限は設けない)。
+    # 合成が RegexpError になるエンコーディングはメモ化されない(han_to_zen 側の
+    # コメントを参照)。
+    HAN_TO_ZEN_KATA_REGEXPS = {} # rubocop:disable Style/MutableConstant -- キャッシュとして書き込む
 
     # Moji.type 用のコードポイント範囲表。[先頭, 末尾, 基本文字種の定数名]。
     # CHAR_REGEXPS の挿入順走査(最初にマッチした文字種が勝つ)を BMP 全域で
@@ -70,8 +76,8 @@ module Moji
     # 範囲の形にそのまま現れている(例: 仝 U+4EDD は ZEN_KANJI の範囲内だが
     # ZEN_JSYMBOL が先に取るため単独範囲として分離される)。
     # CHAR_REGEXPS を実行時に差し替えてもこの表には反映されない。
-    # 再生成するときは CHAR_REGEXPS の replay で作り直し、BMP 全数突合で
-    # 現行実装との一致を確認すること。
+    # 再生成するときは CHAR_REGEXPS の replay で作り直すこと。ロード時の
+    # CHAR_REGEXPS との一致はテスト(test_type.rb の BMP 全数突合)が機械検証する。
     TYPE_RANGE_DATA = [
       [0x0000, 0x001F, :HAN_CONTROL],
       [0x0020, 0x002F, :HAN_ASYMBOL],

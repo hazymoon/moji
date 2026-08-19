@@ -285,6 +285,34 @@ class TestType < Minitest::Test
   end
 
   # ---------------------------------------------------------------------------
+  # 範囲表（TYPE_RANGE_DATA）と CHAR_REGEXPS の全数一致
+  # ---------------------------------------------------------------------------
+
+  # type の実装は CHAR_REGEXPS の走査結果をスナップショットした範囲表の二分探索で、
+  # CHAR_REGEXPS 側だけを変更すると両者が黙って乖離する。挿入順走査（最初に
+  # マッチした文字種が勝つ）を BMP 全コードポイントで replay し、type の結果と
+  # 機械的に突合して乖離を検出する。GoldenFixtures ではなく lib 内の 2 つの表現の
+  # 整合性検査なので、公開定数 CHAR_REGEXPS の参照はこのテストに限り許容する。
+  def test_type_matches_char_regexps_replay_for_all_bmp_codepoints
+    mismatches = []
+    (0x0000..0xFFFF).each do |cp|
+      next if (0xD800..0xDFFF).cover?(cp) # サロゲートは UTF-8 の文字として存在しない
+
+      ch = cp.chr(Encoding::UTF_8)
+      expected = nil
+      Moji::CHAR_REGEXPS.each do |tp, reg|
+        if ch =~ reg
+          expected = tp
+          break
+        end
+      end
+      actual = Moji.type(ch)
+      mismatches << format("U+%04X: type=%p replay=%p", cp, actual, expected) unless actual == expected
+    end
+    assert_empty(mismatches)
+  end
+
+  # ---------------------------------------------------------------------------
   # nil を返す入力
   # ---------------------------------------------------------------------------
 
