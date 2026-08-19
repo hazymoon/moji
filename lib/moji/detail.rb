@@ -229,15 +229,27 @@ module Moji
     #
     # @param str [String] 入力文字列
     # @param nfc [Boolean] 入力と文字列結果を NFC 正規化するか
+    # @param warn_non_utf8 [Boolean] 非 UTF-8 入力に deprecation warning
+    #   (category: :deprecated)を出すか。deprecated なのは「非 UTF-8 の文字列を
+    #   変換対象として受け取り、結果を元エンコーディングへ戻す」経路であり、
+    #   判定対象の指定として非 UTF-8 を受ける encodable? は false で呼ぶ
     # @yieldparam utf8_str [String] UTF-8 化した入力
     # @return [Object] ブロックの評価結果(文字列なら元エンコーディングへ変換済み)
-    def self.convert_encoding(str, nfc: false)
+    def self.convert_encoding(str, nfc: false, warn_non_utf8: true)
       orig_enc = str.encoding
       if orig_enc == Encoding::UTF_8 && !nfc
         # 無駄なコピーを避けるためにencodeを呼ばない。
         return yield(str)
       end
 
+      if warn_non_utf8 && orig_enc != Encoding::UTF_8 && orig_enc != Encoding::US_ASCII
+        # US-ASCII は UTF-8 の部分集合で v3.0 でも受け付けるため警告しない
+        # (LANG=C 環境の File.read 由来文字列などが常時警告になるのを避ける)。
+        # Kernel.warn の明示は Moji.regexp と揃える(こちらは特異メソッド内で
+        # 乗っ取り経路はないが、警告の出し方を 2 か所で同形に保つ)。
+        Kernel.warn("Moji: non-UTF-8 string input is deprecated and will be removed in v3.0 " \
+                    "(input encoding: #{orig_enc.name})", category: :deprecated)
+      end
       utf8 = orig_enc == Encoding::UTF_8 ? str : str.encode(Encoding::UTF_8)
       utf8 = utf8.unicode_normalize(:nfc) if nfc
       result = yield(utf8)

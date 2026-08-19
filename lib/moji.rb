@@ -16,6 +16,13 @@ require "moji/version"
 # 設定されている必要がある。正規表現を返す関数は Encoding.default_internal
 # (未設定の場合は UTF-8)用の正規表現を返す({unencodable} のみ常に UTF-8 用)。
 #
+# 非 UTF-8 対応(非 UTF-8 文字列の入力と、正規表現系の非 UTF-8 エンコーディング)は
+# v2.1 で deprecated となり、v3.0 で削除予定(#5)。該当経路は category: :deprecated
+# の警告を出す(表示には `Warning[:deprecated] = true` か `-W:deprecated` が必要)。
+# {encodable?} / {unencodable} は判定系のため対象外(encoding 引数と
+# {encodable?} への非 UTF-8 文字列入力を含めて v3.0 でも受け付ける)。
+# US-ASCII も UTF-8 の部分集合のため対象外(v3.0 でも受け付ける)。
+#
 # @example 文字種判定
 #   Moji.type("漢")             # => Moji::ZEN_KANJI
 #   Moji.type?("Ａ", Moji::ZEN) # => true
@@ -170,12 +177,27 @@ module Moji
   #
   # @param tp [FlagSetMaker::Flags] 文字種(定数と、それらの `|` 合成)
   # @param encoding [Encoding, nil] 返す正規表現のエンコーディング。省略時は
-  #   Encoding.default_internal(未設定なら UTF-8)
+  #   Encoding.default_internal(未設定なら UTF-8)。非 UTF-8 の解決結果は
+  #   deprecated であり v3.0 で削除予定(category: :deprecated の警告を出す。
+  #   引数明示か default_internal 由来かは区別しない)
   # @return [Regexp]
   # @example
   #   Moji.regexp(Moji::HIRA) # => /[ぁ-ん]/
   def regexp(tp, encoding = nil)
     encoding ||= Encoding.default_internal || Encoding::UTF_8
+    unless [Encoding::UTF_8, Encoding::US_ASCII].include?(encoding)
+      # US-ASCII は UTF-8 の部分集合で v3.0 でも受け付けるため警告しない
+      # (ASCII のみの文字種は従来から常に US-ASCII の正規表現を返す仕様)。
+      # メモ化より前に置き、キャッシュヒット時も警告する(警告の有無が
+      # 呼び出し順序に依存しないようにする)。
+      # Kernel.warn を明示する: 本メソッドは include Moji したクラスの private
+      # メソッドとしても呼ばれるため、レシーバなしの warn は includer 自身の
+      # warn(Logger#warn 等)に解決されて例外や誤ログになる。
+      # encoding は名前文字列も受け付ける(String#encode が名前を受けるため)ので
+      # Encoding#name ではなく補間で文字列化する。
+      Kernel.warn("Moji: non-UTF-8 regexp support is deprecated and will be removed in v3.0 " \
+                  "(encoding: #{encoding})", category: :deprecated)
+    end
     cache = Detail::REGEXP_CACHE
     # キーは Flags 自体（to_i ではない）。Integer 等の Flags でない引数を
     # キャッシュにヒットさせず、従来どおり tp.include? の NoMethodError に落とすため。
@@ -361,7 +383,9 @@ module Moji
   #   Moji.encodable?("髙橋", Encoding::Shift_JIS)   # => false (髙 は IBM 拡張)
   def encodable?(str, encoding, nfc: false)
     _, (starts, ends) = Detail.encodable_lookup(encoding)
-    Detail.convert_encoding(str, nfc: nfc) do |s|
+    # 非 UTF-8 入力の deprecation warning は出さない: 本関数の非 UTF-8 は
+    # 「変換対象」ではなく「判定対象の指定」であり、v3.0 でも受け付ける。
+    Detail.convert_encoding(str, nfc: nfc, warn_non_utf8: false) do |s|
       s.each_codepoint.all? do |o|
         # type の範囲表探索と同一の二分探索(境界を直すときは両方へ反映する)。
         idx = starts.bsearch_index { |v| v > o }

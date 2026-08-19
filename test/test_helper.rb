@@ -78,3 +78,9 @@ module MojiTestHelpers
     $VERBOSE = orig_verbose
   end
 end
+
+# rake test は Rake::TestTask の warning 既定(-w 相当)で Warning[:deprecated] が
+# true になり、非 UTF-8 のゴールデンテスト実行中に deprecation 警告が stderr へ
+# 多数混ざる。警告そのものの検証は test_deprecation.rb が capture 内で明示的に
+# 有効化して行うため、既定の実行では抑止して進捗表示を読めるように保つ。
+Warning[:deprecated] = false
