@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 概要
 
-moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔カタカナ、大文字↔小文字）を行う Ruby gem。[gimite/moji](https://github.com/gimite/moji) 1.6 の fork で、公開 API と変換・判定結果の互換（bug-for-bug）を保ったまま Ruby 3.3+ に現代化した v2 系。ライセンスは CC0-1.0（本家は Public Domain 宣言）。RubyGems.org には出さず、GitHub の git ソース参照で配布する。
+moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔カタカナ、大文字↔小文字）を行う Ruby gem。[gimite/moji](https://github.com/gimite/moji) 1.6 の fork で、公開 API と変換・判定結果の互換（bug-for-bug）を基本方針として Ruby 3.3+ に現代化した v2 系（v2.0 系は完全互換。v2.1 で合意済みのフラグ系バグ修正 #3 のみ挙動が本家と異なる）。ライセンスは CC0-1.0（本家は Public Domain 宣言）。RubyGems.org には出さず、GitHub の git ソース参照で配布する。
 
 リファレンスは README.md（日本語）とコード内の YARD コメント。API を変更したら両方を更新する。
 
@@ -27,9 +27,9 @@ moji は日本語の文字種判定・変換（全角↔半角、ひらがな↔
 
 ## 互換性方針（最重要）
 
-v2 系は本家 1.6 と**変換・判定結果の完全一致（bug-for-bug）**を保証する。`test/` は本家実装の実測値を固定したゴールデンテストであり、バグに見える挙動（`type?` の nil 素通し、`ZEN_LINE` の範囲ずれ、`Flags#empty?` の論理反転、`ZEN_JSYMBOL_LIST` の ◇ 重複、Shift_JIS 入力の `han_to_zen` が例外になるケース等）も**意図的に固定している**。
+v2.0 系は本家 1.6 と**変換・判定結果の完全一致（bug-for-bug）**を保証する。v2.1 では合意のうえで `Moji.type?` の判定不能文字への常時 true（`Flags#include?(nil)` の素通し）と `Flags#empty?` の論理反転の 2 件だけを修正した（#3）。それ以外のバグに見える挙動（`ZEN_LINE` の範囲ずれ、`ZEN_JSYMBOL_LIST` の ◇ 重複、Shift_JIS 入力の `han_to_zen` が例外になるケース等）は引き続き**意図的に固定している**。`test/` は現行リリースの意図した挙動を固定したゴールデンテストである。
 
-- これらを「修正」してはいけない。挙動の変更（Unicode 範囲拡張を含む）は互換性方針の変更であり、テスト期待値の変更とセットでユーザーと合意してから行う
+- 固定中の挙動を「修正」してはいけない。#3 で修正済みの挙動を本家 1.6 へ「差し戻し」てもいけない。挙動の変更（Unicode 範囲拡張を含む）は互換性方針の変更であり、テスト期待値の変更とセットでユーザーと合意してから行う
 - リファクタリング時は `rake test` の GREEN に加え、必要なら新旧実装の全数突合（BMP 全コードポイントの type / 全変換のダンプ比較）で挙動同一を確認する
 
 ## 編集時の注意

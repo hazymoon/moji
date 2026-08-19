@@ -3,9 +3,10 @@
 require "test_helper"
 
 # Moji.type / Moji.type? のゴールデンテスト。
-# 期待値は全て現行実装（本家 1.6 相当）を実行して得た実測値であり、
-# 直感に反する挙動（罫線の範囲ずれ・type? の nil 素通しなど）も
-# bug-for-bug 一致のため意図的にそのまま固定している。
+# 期待値は現行リリースの意図した挙動を固定したもの。v2.0 系までは本家 1.6 の
+# 実測値（バグ込み）を固定していたが、v2.1 で type? の nil 素通し（#3）を
+# 修正した。それ以外の直感に反する挙動（罫線の範囲ずれなど）は本家互換のまま
+# 意図的に固定している。
 class TestType < Minitest::Test
   # 対応表の正データは test_helper の GoldenFixtures に集約している
   # （lib の Detail は private 実装なので参照しない）。
@@ -444,12 +445,10 @@ class TestType < Minitest::Test
     assert_equal(true, Moji.type?("A".b, Moji::HAN))
   end
 
-  # 【意図的に固定するバグ】
-  # type? は Flags#include?(type(ch)) を呼ぶだけで、type が nil のときは
-  # nil.to_i == 0 となり (value & 0) == 0 が常に成立する。
-  # そのため判定不能な文字はあらゆる文字種に対して true を返す。
-  # リファクタリング時に「修正」してはいけない。
-  def test_type_p_returns_true_for_any_type_when_type_is_nil
+  # 本家 1.6 では type が nil のとき nil.to_i == 0 により type? が常に true を
+  # 返していた（Flags#include?(nil) の素通し）。v2.1 で修正し、判定不能な文字は
+  # どの文字種に対しても false を返す（#3）。
+  def test_type_p_returns_false_for_any_type_when_type_is_nil
     unknown = ["한", "😀", "\u{20000}", "é", "─", "Ё", "ヷ", ""]
     types = {
       "HAN" => Moji::HAN,
@@ -462,7 +461,7 @@ class TestType < Minitest::Test
     }
     unknown.each do |ch|
       types.each do |name, tp|
-        assert_equal(true, Moji.type?(ch, tp), format("type?(%p, %s)", ch, name))
+        assert_equal(false, Moji.type?(ch, tp), format("type?(%p, %s)", ch, name))
       end
     end
   end

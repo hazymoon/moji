@@ -3,6 +3,28 @@
 このファイルの形式は [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に、
 バージョニングは [Semantic Versioning](https://semver.org/lang/ja/) に従う。
 
+## [2.1.0] - 未リリース
+
+### 修正（破壊的変更）
+
+- `Moji.type?` が判定不能な文字（`Moji.type` が `nil` を返す文字）に対して
+  常に `true` を返すバグを修正し、`false` を返すようにした
+  （[#3](https://github.com/hazymoon/moji/issues/3)）。本家 1.6 では
+  `Flags#include?(nil)` が `nil.to_i == 0` により常に true だった。
+  空文字列に対する `Moji.type?` も同様に true から false に変わる。
+  「含まれれば通す」判定では受理範囲が狭まる方向の変化だが、文字種判定の
+  Unicode 範囲は本家のまま（[#4](https://github.com/hazymoon/moji/issues/4)）
+  のため、ゔ・ヷ など分類外扱いの正当な日本語文字も弾かれるようになる。
+  逆に「true なら弾く」判定では判定不能な文字がフィルタを通過するようになり、
+  受理範囲は広がる。v2.0 系で回避策としていた `Moji.type` の `nil` 判定は
+  v2.1 でも同じ結果を返すため、移行時にそのまま残してよい
+- `Moji::FlagSetMaker::Flags#empty?` の論理反転（値が非ゼロのとき true）を
+  修正し、名前どおり「値 0 のとき true」を返すようにした
+  （[#3](https://github.com/hazymoon/moji/issues/3)）
+- 値 0 のフラグの `Flags#to_s` が `""` を返す挙動は仕様として維持。
+  `Flags#&` / `#|` の nil 受理（同根の `to_i` 暗黙変換）は
+  [#17](https://github.com/hazymoon/moji/issues/17) で別途追跡（本版では変更なし）
+
 ## [2.0.2] - 2026-08-19
 
 変換・判定結果と公開 API は 2.0.1 と完全一致（v2.0.1 との全出力突合
